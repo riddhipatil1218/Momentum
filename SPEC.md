@@ -25,7 +25,7 @@ Newest at the bottom. Superseded decisions are kept (struck through) so the hist
 | D8 | Activity types and supplements are **archived, never deleted**. | History stays intact. |
 | D9 | Units: pounds, miles, minutes, °F. | US units. |
 | D10 | Tapping an activity logs it immediately; details are an optional "Add details" section on the confirmation screen. | 2 taps to log. |
-| D11 | Calendar: mauve dot (see D39) = at least one workout; gold dot (see D39) = at least one supplement checked. The green dot can be hidden with a toggle (remembered on the phone). | As requested; "any supplement" is easy to change to "all". |
+| D11 | Calendar: burgundy dot (see D44) = at least one workout; dusty-rose dot (see D44) = at least one supplement checked. The green dot can be hidden with a toggle (remembered on the phone). | As requested; "any supplement" is easy to change to "all". |
 | D12 | The calendar week starts on the day your phone's region uses (Sunday in the US). | Respects phone settings. |
 | ~~D13~~ | ~~SwiftUI `.sensoryFeedback` haptics.~~ Superseded by D23. | |
 | ~~D14~~ | ~~Warm theme~~ (superseded by D35): cream background, white rounded cards (22 px corners), coral accent, soft blue and sage dots; dark versions of every color, following the phone's setting. | "Warm and inviting" + light/dark. |
@@ -53,11 +53,12 @@ Newest at the bottom. Superseded decisions are kept (struck through) so the hist
 | D36 | Motivation on Today: an encouraging line, a "This week" strip with a goal bar (default **4 workouts/week**, editable in Milestone 2), and a streak chip from 2 days up. A streak still counts until midnight if you worked out yesterday. | Encouraging and motivating. |
 | D37 | **One-tap logging:** activity chips on Today log immediately and open the confirmation (details / log another / undo). The activity grid remains for logging onto calendar days. | Fewer taps. |
 | D38 | Supplements show as a compact two-column grid. | Cleaner and shorter. |
-| D39 | **Plum palette** chosen by the owner: #1A1A1D, #3B1C32, #6A1E55, #A64D79. Dark mode uses it directly (ink background, deep-plum cards, mauve accents); light mode puts the plums on a soft blush. Dots: **mauve = workouts, gold = supplements** (gold added for contrast against plum). Icon recolored to match. | Owner's palette; dots still need to contrast (D35). |
+| ~~D39~~ | ~~**Plum palette**~~ (dots and gold superseded by D44) chosen by the owner: #1A1A1D, #3B1C32, #6A1E55, #A64D79. Dark mode uses it directly (ink background, deep-plum cards, mauve accents); light mode puts the plums on a soft blush. Dots: **mauve = workouts, gold = supplements** (gold added for contrast against plum). Icon recolored to match. | Owner's palette; dots still need to contrast (D35). |
 | D40 | All emoji display in **black and white** (CSS grayscale), including in messages. | Owner's request; fits the palette. |
 | D41 | Today header: greeting in title case ("Good Evening"), the date underneath, then the encouraging line. | Owner's request. |
 | D42 | **Press and hold** a supplement, or a workout chip/tile, to open an editor: rename, dose note / icon / details to track, reorder (up/down), add, remove (archive, with Keep/Remove confirmation) and restore. The only hint is a faint "Hold to edit" label. | Edit options available but not in the way. |
 | D43 | Supplements start unchecked every day; "Check all" stays available. Sample data never checks today's supplements. | Owner's request. |
+| D44 | **No orange or gold anywhere.** Palette extended with **burgundy #7B2944** and a light **dusty rose** (mauve tint). Surfaces are neutral (warm off-white / charcoal in dark mode) so the home screen isn't one saturated color; plum = buttons and today, burgundy = workouts (dark dot, week ticks, goal bar), dusty rose = supplements (light dot, checks). Icon recolored. | Owner: remove orange, add a burgundy/mauve tone, less saturated home screen; dots contrast by light vs dark. |
 
 ## 2. File structure
 
