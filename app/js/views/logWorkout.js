@@ -3,7 +3,7 @@
 //  - From Today's quick chips: the workout is logged on the tap, and this sheet opens on the confirmation.
 //  - From a calendar day: this sheet first shows a grid of activities to pick from.
 
-import { activeActivities, deleteWorkout, logWorkout, workoutsBetween } from '../data.js';
+import { activeActivities, deleteWorkout, getWeeklyGoal, logWorkout, workoutsBetween } from '../data.js';
 import { dateOnDayAtTime, startOfDay, todayKey } from '../logic/daykey.js';
 import { preferredFirstWeekday } from '../logic/monthgrid.js';
 import { loggedCheer, weekDayKeys } from '../logic/progress.js';
@@ -54,7 +54,7 @@ export function openLogWorkout(dayKey, activity = null) {
     logged = await logWorkout(chosen, when);
     const week = weekDayKeys(dayKey, preferredFirstWeekday());
     const weekWorkouts = await workoutsBetween(week[0], week[6]);
-    cheer = loggedCheer(weekWorkouts.length);
+    cheer = loggedCheer(weekWorkouts.length, await getWeeklyGoal());
     sheet.setTitle('');
     sheet.setButtons(null, { label: 'Done', bold: true });
     sheet.refresh();

@@ -4,7 +4,7 @@ A personal app (one user, one iPhone) for logging workouts, supplements, meals/m
 and weight. It's a **web app**: you add it to the iPhone Home Screen and it runs full
 screen like a regular app. All data is stored on the phone.
 
-Status: **Milestone 1 built (web version), awaiting your review.** Sections marked
+Status: **Milestone 1 live on the phone. Milestone 2 (welcome screen + Settings) in the prototype, awaiting review.** Sections marked
 *(planned)* are proposals for later milestones and will be confirmed before they're built.
 
 ---
@@ -59,6 +59,13 @@ Newest at the bottom. Superseded decisions are kept (struck through) so the hist
 | D42 | **Press and hold** a supplement, or a workout chip/tile, to open an editor: rename, dose note / icon / details to track, reorder (up/down), add, remove (archive, with Keep/Remove confirmation) and restore. The only hint is a faint "Hold to edit" label. | Edit options available but not in the way. |
 | D43 | Supplements start unchecked every day; "Check all" stays available. Sample data never checks today's supplements. | Owner's request. |
 | D44 | **No orange or gold anywhere.** Palette extended with **burgundy #7B2944** and a light **dusty rose** (mauve tint). Surfaces are neutral (warm off-white / charcoal in dark mode) so the home screen isn't one saturated color; plum = buttons and today, burgundy = workouts (dark dot, week ticks, goal bar), dusty rose = supplements (light dot, checks). Icon recolored. | Owner: remove orange, add a burgundy/mauve tone, less saturated home screen; dots contrast by light vs dark. |
+| D45 | Appearance follows the phone's light/dark setting (confirmed by owner). Weekly workout goal defaults to **4** (confirmed), editable in Settings and on the welcome screen (1–14). | Owner's answers. |
+| D46 | Stats, targets, weekly goal and API key are stored as entries in the existing `meta` store (`profile`, `targets`, `weeklyGoal`, `setup.done`, `anthropicApiKey`). **No database migration needed.** | Adds settings without touching saved data. |
+| D47 | **Welcome screen** on first launch (or after the app's data is cleared): step 1 stats, step 2 suggested targets (editable) + weekly goal. "Skip for now" is always available; everything can be changed later in Settings. | Owner types stats on the phone; nothing personal in the code (D30). |
+| D48 | Activity choices: little or no exercise ×1.2, 3–4 workouts a week ×1.375, 5–6 a week ×1.55, hard training every day ×1.725. No deficit if the goal weight is at or above current weight. Calories never go below 1,200 (women) / 1,500 (men). | Matches D17; the floor keeps suggestions safe. |
+| D49 | Settings shows values only; editing happens in sheets (stats, targets, API key). Saving stats offers "Save and update targets" or "Save stats only". Targets show how many kcal the macros add up to. | Tabs redraw on every save, so typing belongs in sheets (D22). |
+| D50 | The API key must start with `sk-ant-`; only its last 4 characters are ever shown. It will be excluded from export (Milestone 6). | Security (D18). |
+| D51 | The prototype's Clear button also clears stats/settings and reloads, so the welcome screen can be tried again. | Easy re-testing. |
 
 ## 2. File structure
 
@@ -84,18 +91,21 @@ Momentum/
 │       │   ├── monthgrid.js     calendar cells + weekday letters
 │       │   ├── numbers.js       pace, number ⇄ text
 │       │   ├── ordering.js      move items up/down in a list
+│       │   ├── targets.js       Mifflin–St Jeor calories + macro targets
 │       │   ├── progress.js      weekly goal, streaks, encouraging messages
 │       │   ├── text.js          safe HTML text, plurals
 │       │   └── workouts.js      activity kinds, defaults, summary line
 │       ├── ui/              building blocks: sheets, haptics, icons, date formatting, press-and-hold
 │       └── views/           screens: today, calendar, dayDetail, logWorkout,
-│                            editWorkout, workoutFields, dayCards, manage (list editors), comingSoon
+│                            editWorkout, workoutFields, dayCards, manage (list editors),
+│                            onboarding (welcome), settings, statsForm, comingSoon
 ├── tools/prototype/     ← builds the claude.ai prototype (not part of the app)
 ├── tests/               ← npm test
 │   ├── daykey.test.js
 │   ├── monthgrid.test.js
 │   ├── ordering.test.js
 │   ├── progress.test.js
+│   ├── targets.test.js
 │   └── numbers.test.js
 └── ios-native/          ← earlier SwiftUI version (unused, see D28)
 ```
@@ -161,10 +171,13 @@ Unchecking deletes the row.
 
 **meta**: small settings as `{ key, value }`, e.g. `seeded.v1`.
 
-### Database version 2 *(planned; I'll ask before adding)*
+### Settings in `meta` (Milestone 2, no migration — D46)
+- **profile**: { sex, age, heightIn, weightLb, goalWeightLb, activity }
+- **targets**: { calories, proteinG, carbsG, fatG }
+- **weeklyGoal**: number (default 4) · **setup.done**: true · **anthropicApiKey**: text
+
+### Database version 2 *(planned for Milestones 3 and 5; I'll ask before adding)*
 New stores only, so existing data is untouched:
-- **profile** (in `meta`): sex, age, heightCm, currentWeightLb, activityLevel, goalWeightLb.
-- **goals** (in `meta`): calories, proteinG, carbsG, fatG.
 - **meals**: id, date, dayKey, name, calories, proteinG, carbsG, fatG, confidence, assumptions, sourceText. Indexed by dayKey.
 - **savedMeals**: favorites for one-tap re-logging (nutrition fields + lastUsed, useCount).
 - **weights**: id, date, dayKey, pounds. Indexed by dayKey.

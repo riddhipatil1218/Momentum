@@ -2,7 +2,7 @@
 // Starts the app: opens the database, adds first-launch defaults, draws the tab bar,
 // and redraws the current tab whenever data changes.
 
-import { seedIfNeeded } from './data.js';
+import { isSetupDone, seedIfNeeded } from './data.js';
 import { openDB, requestPersistentStorage } from './db.js';
 import { escapeHTML } from './logic/text.js';
 import { icons } from './ui/icons.js';
@@ -10,6 +10,8 @@ import { installLongPress } from './ui/longpress.js';
 import './views/manage.js'; // press-and-hold editing of supplements & workouts
 import { renderCalendar } from './views/calendar.js';
 import { comingSoon } from './views/comingSoon.js';
+import { runOnboarding } from './views/onboarding.js';
+import { renderSettings } from './views/settings.js';
 import { renderToday } from './views/today.js';
 
 const TABS = [
@@ -19,8 +21,7 @@ const TABS = [
     render: comingSoon('Macros', '🥗', 'Describe a meal in plain words and get its calories and macros. (Milestone 3)') },
   { id: 'dashboard', label: 'Dashboard', icon: icons.chart,
     render: comingSoon('Dashboard', '📊', 'Daily macro progress and your 7-day streaks. (Milestone 4)') },
-  { id: 'settings', label: 'Settings', icon: icons.gear,
-    render: comingSoon('Settings', '⚙️', 'Your stats, macro targets, supplements and workout types. (Milestone 2)') },
+  { id: 'settings', label: 'Settings', icon: icons.gear, render: renderSettings },
 ];
 
 const view = document.getElementById('view');
@@ -78,6 +79,11 @@ async function start() {
   } catch (error) {
     showError(error);
     return;
+  }
+
+  // First launch: the welcome screen asks for your stats before showing the tabs.
+  if (!(await isSetupDone())) {
+    await new Promise((resolve) => runOnboarding(view, resolve));
   }
 
   // Redraw when data changes, and when you come back to the app (e.g. the next morning).

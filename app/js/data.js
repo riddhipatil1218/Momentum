@@ -134,3 +134,30 @@ export function newSupplement(name, sortOrder) {
 export function newActivity(name, emoji, detailKind, sortOrder) {
   return { id: newId(), name, emoji, detailKind, sortOrder, archived: false };
 }
+
+// ---- Your stats, targets and settings (stored in the "meta" store; no migration needed) ----
+// These live only on the phone. They are never in the code (the repo is public, SPEC D30).
+
+export const DEFAULT_WEEKLY_GOAL = 4;
+
+/** { sex, age, heightIn, weightLb, goalWeightLb, activity } or undefined if not set up yet. */
+export const getProfile = () => db.getMeta('profile');
+export const saveProfile = (profile) => db.setMeta('profile', profile);
+
+/** { calories, proteinG, carbsG, fatG } or undefined. */
+export const getTargets = () => db.getMeta('targets');
+export const saveTargets = (targets) => db.setMeta('targets', targets);
+
+export async function getWeeklyGoal() {
+  return (await db.getMeta('weeklyGoal')) ?? DEFAULT_WEEKLY_GOAL;
+}
+export const saveWeeklyGoal = (goal) => db.setMeta('weeklyGoal', goal);
+
+/** True once the welcome screen has been finished or skipped. */
+export const isSetupDone = async () => Boolean(await db.getMeta('setup.done'));
+export const markSetupDone = () => db.setMeta('setup.done', true);
+
+/** The Anthropic API key (Milestone 3). Stored only on this phone; never exported or logged. */
+export const getApiKey = () => db.getMeta('anthropicApiKey');
+export const saveApiKey = (key) => db.setMeta('anthropicApiKey', key);
+export const removeApiKey = () => db.delete('meta', 'anthropicApiKey');

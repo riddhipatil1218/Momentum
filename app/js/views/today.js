@@ -2,10 +2,10 @@
 // The Today tab: greeting with an encouraging line, this week's progress,
 // one-tap quick-log chips, today's workouts, and the supplement checklist.
 
-import { activeActivities, workoutsBetween } from '../data.js';
+import { activeActivities, getWeeklyGoal, workoutsBetween } from '../data.js';
 import { addDays, todayKey } from '../logic/daykey.js';
 import { preferredFirstWeekday, weekdayLetters } from '../logic/monthgrid.js';
-import { encouragement, WEEKLY_WORKOUT_GOAL, weekDayKeys, workoutStreak } from '../logic/progress.js';
+import { encouragement, weekDayKeys, workoutStreak } from '../logic/progress.js';
 import { escapeHTML, monoEmoji } from '../logic/text.js';
 import { formatLongDate, greeting } from '../ui/format.js';
 import { handleDayCardTap, loadDay, supplementsCardHTML, workoutsCardHTML } from './dayCards.js';
@@ -17,17 +17,17 @@ export async function renderToday(root, { isCurrent }) {
   const firstWeekday = preferredFirstWeekday();
   const week = weekDayKeys(today, firstWeekday);
 
-  const [{ workouts, supplements, takenIds }, activities, recent] = await Promise.all([
+  const [{ workouts, supplements, takenIds }, activities, recent, goal] = await Promise.all([
     loadDay(today),
     activeActivities(),
     workoutsBetween(addDays(today, -60), today), // enough history for streaks
+    getWeeklyGoal(),
   ]);
   if (!isCurrent()) return;
 
   const workoutDays = new Set(recent.map((w) => w.dayKey));
   const weekCount = recent.filter((w) => week.includes(w.dayKey)).length;
   const streak = workoutStreak(workoutDays, today);
-  const goal = WEEKLY_WORKOUT_GOAL;
   const message = encouragement({ workedOutToday: workouts.length > 0, weekCount, goal, streak });
   const letters = weekdayLetters(firstWeekday);
 

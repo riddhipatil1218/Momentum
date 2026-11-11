@@ -3,7 +3,7 @@
 
 import { addDays, startOfDay } from './daykey.js';
 
-/** Default weekly workout goal (will become editable in Settings, Milestone 2). */
+/** Fallback weekly workout goal; your own goal is set in Settings. */
 export const WEEKLY_WORKOUT_GOAL = 4;
 
 /** The 7 day keys of the week containing `dayKey`, starting on `firstWeekday` (0 = Sunday). */

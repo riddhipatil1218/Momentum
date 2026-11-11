@@ -1,9 +1,10 @@
 // prototype.js — only used in the claude.ai prototype, never in the real app.
 // "Add sample data" fills the last two weeks with example workouts and supplements
-// so every screen has something to show. "Clear" removes logged workouts/supplements.
+// so every screen has something to show. "Clear" removes everything you logged plus your
+// stats and settings, and starts again at the welcome screen.
 
 import { activeActivities, activeSupplements, checkAllSupplements, logWorkout, saveWorkout } from './js/data.js';
-import { notifyChanged, openDB } from './js/db.js';
+import { openDB } from './js/db.js';
 import { addDays, dateOnDayAtTime, todayKey } from './js/logic/daykey.js';
 
 // [days ago, activity name, details, hour]
@@ -53,14 +54,18 @@ clearButton.addEventListener('click', async () => {
   }
   const db = await openDB();
   await new Promise((resolve, reject) => {
-    const tx = db.transaction(['workouts', 'supplementLogs'], 'readwrite');
+    const tx = db.transaction(['workouts', 'supplementLogs', 'meta'], 'readwrite');
     tx.objectStore('workouts').clear();
     tx.objectStore('supplementLogs').clear();
+    // Also forget stats, targets and settings so the welcome screen shows again.
+    for (const key of ['profile', 'targets', 'weeklyGoal', 'setup.done', 'anthropicApiKey']) {
+      tx.objectStore('meta').delete(key);
+    }
     tx.oncomplete = resolve;
     tx.onerror = () => reject(tx.error);
   });
   armed = false;
   clearButton.textContent = 'Clear';
   clearButton.classList.remove('warn');
-  notifyChanged();
+  location.reload(); // start over at the welcome screen
 });
