@@ -27,6 +27,15 @@ const MIGRATIONS = [
     // Small key/value settings, e.g. "seeded.v1".
     db.createObjectStore('meta', { keyPath: 'key' });
   },
+
+  // Version 2 — Milestone 3: logged meals, and saved meals for one-tap re-logging.
+  // Only adds new stores; everything from version 1 is left untouched.
+  (db) => {
+    const meals = db.createObjectStore('meals', { keyPath: 'id' });
+    meals.createIndex('dayKey', 'dayKey');
+
+    db.createObjectStore('savedMeals', { keyPath: 'id' });
+  },
 ];
 
 export const DB_VERSION = MIGRATIONS.length;

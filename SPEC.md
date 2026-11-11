@@ -4,7 +4,7 @@ A personal app (one user, one iPhone) for logging workouts, supplements, meals/m
 and weight. It's a **web app**: you add it to the iPhone Home Screen and it runs full
 screen like a regular app. All data is stored on the phone.
 
-Status: **Milestone 1 live on the phone. Milestone 2 (welcome screen + Settings) in the prototype, awaiting review.** Sections marked
+Status: **Milestones 1–2 live on the phone. Milestone 3 (Macros AI chat) in the prototype, awaiting review.** Sections marked
 *(planned)* are proposals for later milestones and will be confirmed before they're built.
 
 ---
@@ -66,6 +66,14 @@ Newest at the bottom. Superseded decisions are kept (struck through) so the hist
 | D49 | Settings shows values only; editing happens in sheets (stats, targets, API key). Saving stats offers "Save and update targets" or "Save stats only". Targets show how many kcal the macros add up to. | Tabs redraw on every save, so typing belongs in sheets (D22). |
 | D50 | The API key must start with `sk-ant-`; only its last 4 characters are ever shown. It will be excluded from export (Milestone 6). | Security (D18). |
 | D51 | The prototype's Clear button also clears stats/settings and reloads, so the welcome screen can be tried again. | Easy re-testing. |
+| D52 | **Database version 2** (owner approved): adds `meals` (indexed by dayKey) and `savedMeals` stores. Nothing in version 1 changes. Tested by upgrading a version-1 database that holds a workout. | Meals need their own tables. |
+| D53 | Meal estimates call the Anthropic Messages API directly from the phone with plain `fetch` (no SDK, per D19), using the `anthropic-dangerous-direct-browser-access` header. The key goes only to api.anthropic.com in `x-api-key`; it is never logged. | No server needed; key stays with the owner. |
+| D54 | Model **Claude Opus 5.5** (`claude-opus-5-5`) at effort `low`, with **structured outputs** (`output_config.format` JSON schema: name, calories, protein_g, carbs_g, fat_g, confidence, assumptions, is_food). About 1–2¢ per estimate. | Reliable JSON, fast and inexpensive for a short task. |
+| D55 | Server-side refusal fallback on (`fallbacks: "default"`, beta `server-side-fallback-2026-07-01`); if an account rejects it, the request is retried once without it. | Keeps estimates working if a request is declined. |
+| D56 | Replies adjust the current meal: the whole conversation is re-sent (append-only, assistant replies unchanged). Numbers edited on the card are passed along with the next reply. After logging, the next message starts a new meal. The chat itself lives in memory; logged meals are saved. | Natural back-and-forth without confusing separate meals. |
+| D57 | Every logged meal is remembered in **saved meals** (one per name). "Log again" chips show favorites first, then most recent; tap logs it today (with Undo); hold to favorite or remove from the list (history unaffected). | One-tap re-logging. |
+| D58 | Logged meals appear on the Macros tab (with today's totals vs targets) and in the calendar's day sheet, where they can be edited or deleted (Keep/Delete). | Meals are editable like everything else. |
+| D59 | The prototype can't reach the internet, so it uses a small built-in **demo estimator** (labelled "Demo estimate"); the real app asks Claude. | Lets the owner try the chat flow in the prototype. |
 
 ## 2. File structure
 
@@ -92,16 +100,20 @@ Momentum/
 │       │   ├── numbers.js       pace, number ⇄ text
 │       │   ├── ordering.js      move items up/down in a list
 │       │   ├── targets.js       Mifflin–St Jeor calories + macro targets
+│       │   ├── meals.js         daily totals, saved-meal order
+│       │   ├── mealEstimate.js  AI prompt, JSON schema, request/response, errors
 │       │   ├── progress.js      weekly goal, streaks, encouraging messages
 │       │   ├── text.js          safe HTML text, plurals
 │       │   └── workouts.js      activity kinds, defaults, summary line
+│       ├── services/        anthropic.js: the only network call (meal estimates)
 │       ├── ui/              building blocks: sheets, haptics, icons, date formatting, press-and-hold
 │       └── views/           screens: today, calendar, dayDetail, logWorkout,
 │                            editWorkout, workoutFields, dayCards, manage (list editors),
-│                            onboarding (welcome), settings, statsForm, comingSoon
+│                            onboarding (welcome), settings, statsForm, macros, mealCards, comingSoon
 ├── tools/prototype/     ← builds the claude.ai prototype (not part of the app)
 ├── tests/               ← npm test
 │   ├── daykey.test.js
+│   ├── meals.test.js
 │   ├── monthgrid.test.js
 │   ├── ordering.test.js
 │   ├── progress.test.js
@@ -176,10 +188,11 @@ Unchecking deletes the row.
 - **targets**: { calories, proteinG, carbsG, fatG }
 - **weeklyGoal**: number (default 4) · **setup.done**: true · **anthropicApiKey**: text
 
-### Database version 2 *(planned for Milestones 3 and 5; I'll ask before adding)*
-New stores only, so existing data is untouched:
-- **meals**: id, date, dayKey, name, calories, proteinG, carbsG, fatG, confidence, assumptions, sourceText. Indexed by dayKey.
-- **savedMeals**: favorites for one-tap re-logging (nutrition fields + lastUsed, useCount).
+### Database version 2 (Milestone 3, built — D52)
+- **meals**: id, date, dayKey, name, calories, proteinG, carbsG, fatG, confidence, assumptions[], sourceText, createdAt. Indexed by dayKey.
+- **savedMeals**: id, name, calories, proteinG, carbsG, fatG, assumptions[], favorite, useCount, lastUsed, createdAt.
+
+### Database version 3 *(planned for Milestone 5; I'll ask before adding)*
 - **weights**: id, date, dayKey, pounds. Indexed by dayKey.
 
 ## 4. Milestones

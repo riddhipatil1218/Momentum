@@ -177,14 +177,15 @@ function openTargetsSheet(targets, profile) {
   });
 }
 
-function openApiKeySheet(savedKey) {
+export function openApiKeySheet(savedKey) {
   let confirmRemove = false;
   const sheet = openSheet({
     title: 'Anthropic API key',
     render(body) {
       body.innerHTML = `
-        <p class="sheet-hint">Used by the Macros tab to estimate meals (Milestone 3). The key is stored only
-          on this phone. It is never shown in full, exported or uploaded anywhere except to Anthropic.</p>
+        <p class="sheet-hint">Used by the Macros tab to estimate meals (about 1–2¢ each, billed by Anthropic).
+          The key is stored only on this phone, is never shown in full, and is sent only to Anthropic.
+          Create one at console.anthropic.com → API Keys.</p>
         ${savedKey ? `
           <div class="form-group">
             <div class="form-row"><span>Saved key</span><span class="row-value">•••• ${escapeHTML(savedKey.slice(-4))}</span></div>

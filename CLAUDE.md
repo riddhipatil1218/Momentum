@@ -36,9 +36,14 @@ Read `SPEC.md` first. It holds the data model, milestones and the decisions log.
 5. Days are `dayKey` numbers (`YYYYMMDD`) from `dayKeyFromDate`. Look things up by dayKey, not raw dates.
 6. Writes go through `db.js`, which fires `momentum:changed` so screens redraw.
 
-## Secrets
-- The Anthropic API key is typed into Settings and stored only on the phone.
-  Never hard-code it, log it, or put it in any file, test or commit.
+## Secrets and the AI call
+- The Anthropic API key is typed into Settings and stored only on the phone (`meta.anthropicApiKey`).
+  Never hard-code it, log it, or put it in any file, test or commit. Exclude it from export.
+- `app/js/services/anthropic.js` is the only network call. It sends the key only to
+  api.anthropic.com. Request shape lives in `logic/mealEstimate.js` (model `claude-opus-5-5`,
+  structured outputs, effort low, fallback on) and is unit tested. Don't send `temperature`.
+- Test the Macros flow with Playwright by routing `https://api.anthropic.com/v1/messages`
+  to a fake response; never use a real key in tests.
 
 ## Code conventions
 - Any user-typed text shown in HTML goes through `escapeHTML`.

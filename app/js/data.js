@@ -4,6 +4,7 @@
 
 import { db } from './db.js';
 import { dayKeyFromDate } from './logic/daykey.js';
+import { mealKey } from './logic/meals.js';
 import { DEFAULT_ACTIVITIES, DEFAULT_SUPPLEMENTS } from './logic/workouts.js';
 
 const newId = () => crypto.randomUUID();
@@ -161,3 +162,56 @@ export const markSetupDone = () => db.setMeta('setup.done', true);
 export const getApiKey = () => db.getMeta('anthropicApiKey');
 export const saveApiKey = (key) => db.setMeta('anthropicApiKey', key);
 export const removeApiKey = () => db.delete('meta', 'anthropicApiKey');
+
+// ---- Meals (Milestone 3) ---------------------------------------------------------------
+
+/** Logs a meal at `date` and remembers it in the saved-meals list for one-tap re-logging. */
+export async function logMeal(estimate, date = new Date(), sourceText = '') {
+  const meal = {
+    id: newId(),
+    date: date.toISOString(),
+    dayKey: dayKeyFromDate(date),
+    name: estimate.name,
+    calories: estimate.calories,
+    proteinG: estimate.proteinG,
+    carbsG: estimate.carbsG,
+    fatG: estimate.fatG,
+    confidence: estimate.confidence ?? null,
+    assumptions: estimate.assumptions ?? [],
+    sourceText,
+    createdAt: new Date().toISOString(),
+  };
+  await db.put('meals', meal);
+  await rememberMeal(meal);
+  return meal;
+}
+
+export async function mealsOnDay(dayKey) {
+  return (await db.getByDay('meals', dayKey)).sort((a, b) => a.date.localeCompare(b.date));
+}
+export const getMeal = (id) => db.get('meals', id);
+export const saveMeal = (meal) => db.put('meals', meal);
+export const deleteMeal = (id) => db.delete('meals', id);
+
+/** Saved meals: one entry per meal name, updated each time it's logged. */
+export const allSavedMeals = () => db.getAll('savedMeals');
+export const saveSavedMeal = (saved) => db.put('savedMeals', saved);
+export const deleteSavedMeal = (id) => db.delete('savedMeals', id);
+
+async function rememberMeal(meal) {
+  const key = mealKey(meal.name);
+  const existing = (await allSavedMeals()).find((s) => mealKey(s.name) === key);
+  await saveSavedMeal({
+    id: existing?.id ?? newId(),
+    name: meal.name,
+    calories: meal.calories,
+    proteinG: meal.proteinG,
+    carbsG: meal.carbsG,
+    fatG: meal.fatG,
+    assumptions: meal.assumptions,
+    favorite: existing?.favorite ?? false,
+    useCount: (existing?.useCount ?? 0) + 1,
+    lastUsed: new Date().toISOString(),
+    createdAt: existing?.createdAt ?? new Date().toISOString(),
+  });
+}

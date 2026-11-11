@@ -21,5 +21,6 @@ export const icons = {
   check: svg('<path d="M20 6L9 17l-5-5"/>', 18),
   undo: svg('<path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>', 20),
   sliders: svg('<path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/>', 20),
+  send: svg('<path d="M12 19V5M5 12l7-7 7 7"/>', 20),
   trash: svg('<path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/>', 20),
 };
