@@ -25,7 +25,7 @@ export async function loadDay(dayKey) {
 export function workoutsCardHTML(workouts, emptyMessage) {
   const rows = workouts.map((w) => `
     <button class="workout-row" data-action="edit-workout" data-id="${w.id}">
-      <span class="workout-emoji" aria-hidden="true">${escapeHTML(w.emoji)}</span>
+      <span class="workout-emoji mono" aria-hidden="true">${escapeHTML(w.emoji)}</span>
       <span class="row-text">
         <span class="row-title">${escapeHTML(w.activityName)}</span>
         <span class="row-subtitle">${escapeHTML(workoutSummary(w))}</span>
@@ -52,7 +52,7 @@ export function supplementsCardHTML(supplements, takenIds) {
   const rows = supplements.map((s) => {
     const taken = takenIds.has(s.id);
     return `
-      <button class="supp-row ${taken ? 'taken' : ''}" data-action="toggle-supplement"
+      <button class="supp-row ${taken ? 'taken' : ''}" data-action="toggle-supplement" data-hold
               data-id="${s.id}" data-taken="${taken}" aria-pressed="${taken}">
         <span class="check-circle">${taken ? icons.check : ''}</span>
         <span class="row-text">
@@ -65,7 +65,7 @@ export function supplementsCardHTML(supplements, takenIds) {
   return `
     <section class="card">
       <div class="card-header">
-        <h3>Supplements</h3>
+        <h3>Supplements <span class="hold-hint">Hold to edit</span></h3>
         <span class="badge ${allDone ? 'supplement' : 'muted'}">${allDone ? 'All done ✓' : `${takenCount} of ${supplements.length}`}</span>
       </div>
       <div class="supp-grid">${rows}</div>

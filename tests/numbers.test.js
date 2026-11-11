@@ -61,3 +61,10 @@ test('plural', () => {
   assert.equal(plural(1, 'workout'), '1 workout');
   assert.equal(plural(3, 'day'), '3 days');
 });
+
+test('emoji are wrapped for black-and-white display', async () => {
+  const { monoEmoji } = await import('../app/js/logic/text.js');
+  assert.equal(monoEmoji('Keep going 🔥'), 'Keep going <span class="mono">🔥</span>');
+  assert.equal(monoEmoji('No emoji here'), 'No emoji here');
+  assert.equal(monoEmoji('🏃‍♀️ run'), '<span class="mono">🏃‍♀️</span> run');
+});

@@ -7,7 +7,7 @@ import { activeActivities, deleteWorkout, logWorkout, workoutsBetween } from '..
 import { dateOnDayAtTime, startOfDay, todayKey } from '../logic/daykey.js';
 import { preferredFirstWeekday } from '../logic/monthgrid.js';
 import { loggedCheer, weekDayKeys } from '../logic/progress.js';
-import { escapeHTML } from '../logic/text.js';
+import { escapeHTML, monoEmoji } from '../logic/text.js';
 import { formatShortDate } from '../ui/format.js';
 import { haptic } from '../ui/haptics.js';
 import { icons } from '../ui/icons.js';
@@ -27,10 +27,15 @@ export function openLogWorkout(dayKey, activity = null) {
   let cheer = '';
   let showDetails = false;
 
+  // If the workout list is edited (hold a tile) while picking, redraw the grid.
+  const onDataChanged = () => { if (!logged && !activity) sheet.refresh(); };
+  window.addEventListener('momentum:changed', onDataChanged);
+
   const sheet = openSheet({
     title: activity ? '' : pickerTitle,
     left: activity ? null : { label: 'Cancel' },
     right: activity ? { label: 'Done', bold: true } : null,
+    onClose: () => window.removeEventListener('momentum:changed', onDataChanged),
     async render(body) {
       if (logged) renderConfirmation(body);
       else if (activity) body.innerHTML = '';   // logging in progress (a split second)
@@ -60,8 +65,8 @@ export function openLogWorkout(dayKey, activity = null) {
     body.innerHTML = `
       <div class="activity-grid">
         ${activities.map((a) => `
-          <button class="activity-tile" data-id="${a.id}">
-            <span class="activity-emoji" aria-hidden="true">${escapeHTML(a.emoji)}</span>
+          <button class="activity-tile" data-id="${a.id}" data-hold>
+            <span class="activity-emoji mono" aria-hidden="true">${escapeHTML(a.emoji)}</span>
             <span class="activity-name">${escapeHTML(a.name)}</span>
           </button>`).join('')}
       </div>`;
@@ -78,8 +83,8 @@ export function openLogWorkout(dayKey, activity = null) {
     body.innerHTML = `
       <div class="confirmation">
         <div class="confirmation-check">${icons.check}</div>
-        <h2>${escapeHTML(logged.emoji)} ${escapeHTML(logged.activityName)} logged</h2>
-        <p>${escapeHTML(isToday ? cheer : `Added to ${dayLabel}`)}</p>
+        <h2><span class="mono">${escapeHTML(logged.emoji)}</span> ${escapeHTML(logged.activityName)} logged</h2>
+        <p>${monoEmoji(escapeHTML(isToday ? cheer : `Added to ${dayLabel}`))}</p>
       </div>
 
       <div class="form-group">

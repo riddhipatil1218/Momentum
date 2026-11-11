@@ -16,3 +16,9 @@ export function escapeHTML(value) {
 export function plural(count, word) {
   return `${count} ${word}${count === 1 ? '' : 's'}`;
 }
+
+/** Wraps every emoji in already-escaped HTML so it shows in black and white (class "mono"). */
+export function monoEmoji(html) {
+  return String(html).replace(/(\p{Extended_Pictographic}(?:[️‍]|\p{Extended_Pictographic})*)/gu,
+    '<span class="mono">$1</span>');
+}

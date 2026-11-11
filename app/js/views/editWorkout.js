@@ -19,7 +19,7 @@ export async function openEditWorkout(workoutId) {
       body.innerHTML = `
         <div class="form-group">
           <div class="form-row">
-            <span class="activity-label"><span class="emoji">${escapeHTML(workout.emoji)}</span>${escapeHTML(workout.activityName)}</span>
+            <span class="activity-label"><span class="emoji mono">${escapeHTML(workout.emoji)}</span>${escapeHTML(workout.activityName)}</span>
           </div>
           <label class="form-row">
             <span>When</span>

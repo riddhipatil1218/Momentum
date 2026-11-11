@@ -6,6 +6,8 @@ import { seedIfNeeded } from './data.js';
 import { openDB, requestPersistentStorage } from './db.js';
 import { escapeHTML } from './logic/text.js';
 import { icons } from './ui/icons.js';
+import { installLongPress } from './ui/longpress.js';
+import './views/manage.js'; // press-and-hold editing of supplements & workouts
 import { renderCalendar } from './views/calendar.js';
 import { comingSoon } from './views/comingSoon.js';
 import { renderToday } from './views/today.js';
@@ -59,6 +61,7 @@ function showError(error) {
 }
 
 async function start() {
+  installLongPress();
   tabBar.innerHTML = TABS.map((t) => `
     <button data-tab="${t.id}">${t.icon}<span>${t.label}</span></button>`).join('');
   tabBar.onclick = (event) => {

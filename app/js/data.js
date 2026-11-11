@@ -111,3 +111,26 @@ function makeLog(supplement, dayKey) {
     loggedAt: new Date().toISOString(),
   };
 }
+
+// ---- Managing the lists (hold a supplement or workout to edit) --------------------
+
+/** Everything, including removed (archived) items, sorted. */
+export async function allSupplements() {
+  return (await db.getAll('supplements')).sort(bySortOrder);
+}
+export async function allActivities() {
+  return (await db.getAll('activityTypes')).sort(bySortOrder);
+}
+
+export const saveSupplement = (supplement) => db.put('supplements', supplement);
+export const saveActivity = (activity) => db.put('activityTypes', activity);
+/** Saves a whole list at once (used after reordering). */
+export const saveSupplementList = (items) => db.putMany('supplements', items);
+export const saveActivityList = (items) => db.putMany('activityTypes', items);
+
+export function newSupplement(name, sortOrder) {
+  return { id: newId(), name, doseNote: '', sortOrder, archived: false, createdAt: new Date().toISOString() };
+}
+export function newActivity(name, emoji, detailKind, sortOrder) {
+  return { id: newId(), name, emoji, detailKind, sortOrder, archived: false };
+}

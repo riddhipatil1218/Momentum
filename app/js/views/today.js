@@ -6,7 +6,7 @@ import { activeActivities, workoutsBetween } from '../data.js';
 import { addDays, todayKey } from '../logic/daykey.js';
 import { preferredFirstWeekday, weekdayLetters } from '../logic/monthgrid.js';
 import { encouragement, WEEKLY_WORKOUT_GOAL, weekDayKeys, workoutStreak } from '../logic/progress.js';
-import { escapeHTML } from '../logic/text.js';
+import { escapeHTML, monoEmoji } from '../logic/text.js';
 import { formatLongDate, greeting } from '../ui/format.js';
 import { handleDayCardTap, loadDay, supplementsCardHTML, workoutsCardHTML } from './dayCards.js';
 import { openLogWorkout } from './logWorkout.js';
@@ -34,16 +34,16 @@ export async function renderToday(root, { isCurrent }) {
   root.innerHTML = `
     <header class="page-header">
       <div>
-        <p class="eyebrow">${formatLongDate(new Date())}</p>
         <h1>${greeting()}</h1>
-        <p class="encouragement">${escapeHTML(message)}</p>
+        <p class="header-date">${formatLongDate(new Date())}</p>
+        <p class="encouragement">${monoEmoji(escapeHTML(message))}</p>
       </div>
     </header>
 
     <section class="card week-card" aria-label="This week">
       <div class="card-header">
         <h3>This week</h3>
-        ${streak >= 2 ? `<span class="streak-chip">🔥 ${streak}-day streak</span>` : ''}
+        ${streak >= 2 ? `<span class="streak-chip"><span class="mono">🔥</span> ${streak}-day streak</span>` : ''}
       </div>
       <div class="week-strip">
         ${week.map((key, i) => `
@@ -59,11 +59,14 @@ export async function renderToday(root, { isCurrent }) {
     </section>
 
     <section class="quick-log" aria-label="Log a workout">
-      <h3 class="section-title">Log a workout</h3>
+      <div class="section-title-row">
+        <h3 class="section-title">Log a workout</h3>
+        <span class="hold-hint">Hold to edit</span>
+      </div>
       <div class="quick-chips">
         ${activities.map((a) => `
-          <button class="quick-chip" data-quick-log="${a.id}">
-            <span class="quick-emoji" aria-hidden="true">${escapeHTML(a.emoji)}</span>${escapeHTML(a.name)}
+          <button class="quick-chip" data-quick-log="${a.id}" data-hold>
+            <span class="quick-emoji mono" aria-hidden="true">${escapeHTML(a.emoji)}</span>${escapeHTML(a.name)}
           </button>`).join('')}
       </div>
     </section>

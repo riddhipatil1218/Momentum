@@ -1,29 +1,31 @@
-/* styles.css — Momentum's look: fresh and light, emerald for progress and actions,
-   blue for workouts, orange for supplements (strong contrast, colour-blind friendly).
+/* styles.css — Momentum's look, built on the owner's plum palette:
+   #1A1A1D (ink), #3B1C32 (deep plum), #6A1E55 (plum), #A64D79 (mauve).
+   Dark mode uses the palette directly; light mode puts the same plums on a soft blush.
+   Mauve dots = workouts, gold dots = supplements (strong contrast against plum).
    Layout concept: compact stacked cards; one clear action per card; progress up top.
    Every color is a variable ("token") with a dark-mode version below. */
 
 :root {
-  --bg: #F5F8F4;            /* crisp off-white with a hint of green */
+  --bg: #F8F3F6;            /* soft blush, tinted from the plums */
   --card: #FFFFFF;
-  --fill: #EDF2EC;          /* chips, inputs, quiet backgrounds */
-  --border: rgba(22, 48, 32, 0.07);
-  --text: #14211A;
-  --text-2: #66756C;        /* secondary text */
-  --separator: rgba(22, 48, 32, 0.08);
+  --fill: #F2E8EE;          /* chips, inputs, quiet backgrounds */
+  --border: rgba(59, 28, 50, 0.08);
+  --text: #1A1A1D;          /* palette ink */
+  --text-2: #6E6270;        /* secondary text */
+  --separator: rgba(59, 28, 50, 0.09);
 
-  --accent: #0F9D63;        /* emerald: progress & actions */
-  --accent-strong: #0A7F4F; /* emerald text on light fills */
-  --accent-soft: rgba(15, 157, 99, 0.12);
-  --workout: #2F6BFF;       /* blue: workouts */
-  --workout-soft: rgba(47, 107, 255, 0.11);
-  --supplement: #FF8A1F;    /* orange: supplements */
-  --supplement-soft: rgba(255, 138, 31, 0.14);
-  --danger: #E5484D;
+  --accent: #6A1E55;        /* palette plum: progress & actions */
+  --accent-strong: #6A1E55; /* plum text on light fills */
+  --accent-soft: rgba(106, 30, 85, 0.10);
+  --workout: #A64D79;       /* palette mauve: workouts */
+  --workout-soft: rgba(166, 77, 121, 0.13);
+  --supplement: #D4952A;    /* gold: supplements */
+  --supplement-soft: rgba(212, 149, 42, 0.16);
+  --danger: #C9364A;
   --on-color: #FFFFFF;      /* text on filled accent buttons */
 
-  --shadow: 0 1px 2px rgba(20, 40, 28, 0.04), 0 6px 16px rgba(20, 40, 28, 0.04);
-  --tabbar-bg: rgba(245, 248, 244, 0.88);
+  --shadow: 0 1px 2px rgba(59, 28, 50, 0.04), 0 6px 16px rgba(59, 28, 50, 0.05);
+  --tabbar-bg: rgba(248, 243, 246, 0.88);
 
   --font-body: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, "Segoe UI", Roboto, sans-serif;
   --font-display: ui-rounded, "SF Pro Rounded", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
@@ -36,29 +38,29 @@
   color-scheme: light;
 }
 
-/* Dark mode follows the phone's setting. */
+/* Dark mode follows the phone's setting: the palette as given. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0E1411; --card: #171F1B; --fill: #212B26; --border: rgba(220, 255, 235, 0.06);
-    --text: #ECF3EE; --text-2: #92A198; --separator: rgba(220, 255, 235, 0.08);
-    --accent: #34D399; --accent-strong: #5EE3AE; --accent-soft: rgba(52, 211, 153, 0.15);
-    --workout: #6E9BFF; --workout-soft: rgba(110, 155, 255, 0.16);
-    --supplement: #FFA24D; --supplement-soft: rgba(255, 162, 77, 0.16);
-    --danger: #FF6B6F; --on-color: #062417;
-    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-    --tabbar-bg: rgba(14, 20, 17, 0.88);
+    --bg: #1A1A1D; --card: #3B1C32; --fill: rgba(166, 77, 121, 0.20); --border: rgba(255, 220, 240, 0.06);
+    --text: #F6EDF2; --text-2: #BBA6B4; --separator: rgba(255, 220, 240, 0.09);
+    --accent: #A64D79; --accent-strong: #E29BC0; --accent-soft: rgba(166, 77, 121, 0.24);
+    --workout: #D982AE; --workout-soft: rgba(217, 130, 174, 0.18);
+    --supplement: #F2B84B; --supplement-soft: rgba(242, 184, 75, 0.18);
+    --danger: #FF7083; --on-color: #FFFFFF;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+    --tabbar-bg: rgba(26, 26, 29, 0.9);
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #0E1411; --card: #171F1B; --fill: #212B26; --border: rgba(220, 255, 235, 0.06);
-  --text: #ECF3EE; --text-2: #92A198; --separator: rgba(220, 255, 235, 0.08);
-  --accent: #34D399; --accent-strong: #5EE3AE; --accent-soft: rgba(52, 211, 153, 0.15);
-  --workout: #6E9BFF; --workout-soft: rgba(110, 155, 255, 0.16);
-  --supplement: #FFA24D; --supplement-soft: rgba(255, 162, 77, 0.16);
-  --danger: #FF6B6F; --on-color: #062417;
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --tabbar-bg: rgba(14, 20, 17, 0.88);
+  --bg: #1A1A1D; --card: #3B1C32; --fill: rgba(166, 77, 121, 0.20); --border: rgba(255, 220, 240, 0.06);
+  --text: #F6EDF2; --text-2: #BBA6B4; --separator: rgba(255, 220, 240, 0.09);
+  --accent: #A64D79; --accent-strong: #E29BC0; --accent-soft: rgba(166, 77, 121, 0.24);
+  --workout: #D982AE; --workout-soft: rgba(217, 130, 174, 0.18);
+  --supplement: #F2B84B; --supplement-soft: rgba(242, 184, 75, 0.18);
+  --danger: #FF7083; --on-color: #FFFFFF;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --tabbar-bg: rgba(26, 26, 29, 0.9);
   color-scheme: dark;
 }
 
@@ -99,8 +101,8 @@ svg { flex-shrink: 0; }
 
 .page-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; padding: 6px 2px 2px; }
 .page-header h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.01em; }
-.eyebrow { font-size: 12px; font-weight: 650; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 2px; }
-.encouragement { font-size: 15px; color: var(--accent-strong); font-weight: 550; margin-top: 4px; }
+.header-date { font-size: 14px; font-weight: 500; color: var(--text-2); margin-top: 1px; }
+.encouragement { font-size: 15px; color: var(--accent-strong); font-weight: 600; margin-top: 8px; }
 .section-title { font-size: 13px; font-weight: 650; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.06em; padding: 0 2px; }
 
 /* ---- Cards --------------------------------------------------------------------- */
@@ -410,6 +412,36 @@ svg { flex-shrink: 0; }
 }
 .tab-bar button svg { width: 22px; height: 22px; }
 .tab-bar button.active { color: var(--accent); }
+
+/* ---- Black-and-white emoji, press-and-hold, list editor ------------------------- */
+
+.mono { filter: grayscale(1) contrast(1.1); }
+[data-hold] { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+.section-title-row { display: flex; align-items: baseline; justify-content: space-between; padding-right: 2px; }
+.hold-hint { font-size: 11px; font-weight: 500; color: var(--text-2); opacity: 0.6; letter-spacing: 0; text-transform: none; font-family: var(--font-body); }
+.card-header h3 .hold-hint { margin-left: 6px; }
+
+.sheet-hint { font-size: 13px; color: var(--text-2); padding: 0 4px; }
+.edit-row { display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 12px; transition: background 0.6s ease; }
+.edit-row + .edit-row { border-top: 1px solid var(--separator); }
+.edit-row.focused { background: var(--accent-soft); }
+.edit-row .confirm-row { flex: 1; display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 40px; font-size: 15px; }
+.edit-fields { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.field-pair { display: flex; gap: 6px; }
+.edit-actions { display: flex; align-items: center; }
+.icon-button.small { width: 34px; height: 34px; }
+.icon-button.small svg { width: 18px; height: 18px; }
+.icon-button.danger { color: var(--danger); }
+.icon-button:disabled { opacity: 0.25; cursor: default; }
+.text-input {
+  width: 100%; min-width: 0; font: inherit; font-size: 16px; color: var(--text);
+  background: var(--fill); border: 0; border-radius: 9px; padding: 7px 10px;
+}
+.text-input.small { font-size: 14px; padding: 6px 10px; color: var(--text-2); }
+select.text-input { appearance: none; -webkit-appearance: none; }
+.emoji-input { width: 46px; flex-shrink: 0; text-align: center; padding-inline: 4px; }
+.add-row { display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 12px; }
+.add-row .text-input { flex: 1; }
 
 /* ---- Misc ------------------------------------------------------------------------- */
 

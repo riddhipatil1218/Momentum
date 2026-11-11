@@ -12,6 +12,15 @@ export const DetailKind = Object.freeze({
   general: 'general',         // duration, notes (Yoga, Pilates, Sculpt, custom)
 });
 
+/** What each kind of activity asks for, shown when adding/editing workout types. */
+export const DETAIL_KIND_LABELS = {
+  [DetailKind.running]: 'Distance & pace',
+  [DetailKind.stairMaster]: 'Level & floors',
+  [DetailKind.strength]: 'Body focus & notes',
+  [DetailKind.hotYoga]: 'Room temperature',
+  [DetailKind.general]: 'Duration & notes',
+};
+
 export const BODY_FOCUS_OPTIONS = ['Full body', 'Upper body', 'Lower body', 'Glutes', 'Arms', 'Back', 'Core'];
 export const DURATION_PRESETS = [20, 30, 45, 60, 75];
 
