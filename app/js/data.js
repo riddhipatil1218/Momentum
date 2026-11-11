@@ -68,6 +68,10 @@ export async function workoutsOnDay(dayKey) {
   return (await db.getByDay('workouts', dayKey)).sort((a, b) => a.date.localeCompare(b.date));
 }
 
+/** All workouts between two day keys (inclusive), e.g. for streaks and weekly progress. */
+export const workoutsBetween = (firstDayKey, lastDayKey) =>
+  db.getByDayRange('workouts', firstDayKey, lastDayKey);
+
 export const getWorkout = (id) => db.get('workouts', id);
 export const saveWorkout = (workout) => db.put('workouts', workout);
 export const deleteWorkout = (id) => db.delete('workouts', id);

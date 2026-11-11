@@ -1,9 +1,12 @@
 // logWorkout.js
-// Step 1: a grid of big activity tiles. Tapping one logs it immediately (with a haptic).
-// Step 2: a confirmation with optional "Add details", "Log another" and "Undo".
+// Logs a workout and shows a cheerful confirmation with optional details.
+//  - From Today's quick chips: the workout is logged on the tap, and this sheet opens on the confirmation.
+//  - From a calendar day: this sheet first shows a grid of activities to pick from.
 
-import { activeActivities, deleteWorkout, logWorkout } from '../data.js';
+import { activeActivities, deleteWorkout, logWorkout, workoutsBetween } from '../data.js';
 import { dateOnDayAtTime, startOfDay, todayKey } from '../logic/daykey.js';
+import { preferredFirstWeekday } from '../logic/monthgrid.js';
+import { loggedCheer, weekDayKeys } from '../logic/progress.js';
 import { escapeHTML } from '../logic/text.js';
 import { formatShortDate } from '../ui/format.js';
 import { haptic } from '../ui/haptics.js';
@@ -11,23 +14,46 @@ import { icons } from '../ui/icons.js';
 import { openSheet } from '../ui/sheet.js';
 import { bindWorkoutFields, workoutFieldsHTML } from './workoutFields.js';
 
-/** @param {number} dayKey which day to log onto (today or a calendar day) */
-export function openLogWorkout(dayKey) {
+/**
+ * @param {number} dayKey which day to log onto
+ * @param {object} [activity] if given, log it right away (one-tap logging)
+ */
+export function openLogWorkout(dayKey, activity = null) {
   const isToday = dayKey === todayKey();
   const dayLabel = formatShortDate(startOfDay(dayKey));
+  const pickerTitle = isToday ? 'Log workout' : `Log for ${dayLabel}`;
 
   let logged = null;        // the workout just logged; null = still choosing
+  let cheer = '';
   let showDetails = false;
 
   const sheet = openSheet({
-    title: isToday ? 'Log workout' : `Log for ${dayLabel}`,
-    left: { label: 'Cancel' },
-    right: null,
+    title: activity ? '' : pickerTitle,
+    left: activity ? null : { label: 'Cancel' },
+    right: activity ? { label: 'Done', bold: true } : null,
     async render(body) {
       if (logged) renderConfirmation(body);
+      else if (activity) body.innerHTML = '';   // logging in progress (a split second)
       else await renderPicker(body);
     },
   });
+
+  if (activity) {
+    haptic();
+    log(activity);
+  }
+
+  async function log(chosen) {
+    // Today: right now. Past day: that day at the current clock time.
+    const when = isToday ? new Date() : dateOnDayAtTime(dayKey, new Date());
+    logged = await logWorkout(chosen, when);
+    const week = weekDayKeys(dayKey, preferredFirstWeekday());
+    const weekWorkouts = await workoutsBetween(week[0], week[6]);
+    cheer = loggedCheer(weekWorkouts.length);
+    sheet.setTitle('');
+    sheet.setButtons(null, { label: 'Done', bold: true });
+    sheet.refresh();
+  }
 
   async function renderPicker(body) {
     const activities = await activeActivities();
@@ -40,17 +66,11 @@ export function openLogWorkout(dayKey) {
           </button>`).join('')}
       </div>`;
 
-    body.onclick = async (event) => {
+    body.onclick = (event) => {
       const tile = event.target.closest('.activity-tile');
       if (!tile) return;
       haptic();
-      const activity = activities.find((a) => a.id === tile.dataset.id);
-      // Today: right now. Past day: that day at the current clock time.
-      const when = isToday ? new Date() : dateOnDayAtTime(dayKey, new Date());
-      logged = await logWorkout(activity, when);
-      sheet.setTitle('');
-      sheet.setButtons(null, { label: 'Done', bold: true });
-      sheet.refresh();
+      log(activities.find((a) => a.id === tile.dataset.id));
     };
   }
 
@@ -58,8 +78,8 @@ export function openLogWorkout(dayKey) {
     body.innerHTML = `
       <div class="confirmation">
         <div class="confirmation-check">${icons.check}</div>
-        <h2>${escapeHTML(logged.activityName)} logged</h2>
-        <p>${isToday ? 'Nice work today! 🎉' : `Added to ${escapeHTML(dayLabel)}`}</p>
+        <h2>${escapeHTML(logged.emoji)} ${escapeHTML(logged.activityName)} logged</h2>
+        <p>${escapeHTML(isToday ? cheer : `Added to ${dayLabel}`)}</p>
       </div>
 
       <div class="form-group">
@@ -96,8 +116,9 @@ export function openLogWorkout(dayKey) {
 
   function backToPicker() {
     logged = null;
+    activity = null;
     showDetails = false;
-    sheet.setTitle(isToday ? 'Log workout' : `Log for ${dayLabel}`);
+    sheet.setTitle(pickerTitle);
     sheet.setButtons({ label: 'Cancel' }, null);
     sheet.refresh();
   }

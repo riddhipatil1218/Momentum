@@ -66,9 +66,9 @@ export function supplementsCardHTML(supplements, takenIds) {
     <section class="card">
       <div class="card-header">
         <h3>Supplements</h3>
-        <span class="badge ${allDone ? 'supplement' : 'muted'}">${takenCount} of ${supplements.length}</span>
+        <span class="badge ${allDone ? 'supplement' : 'muted'}">${allDone ? 'All done ✓' : `${takenCount} of ${supplements.length}`}</span>
       </div>
-      ${rows}
+      <div class="supp-grid">${rows}</div>
       ${takenCount < supplements.length
         ? `<button class="link-button supplement" data-action="check-all">Check all</button>` : ''}
     </section>`;

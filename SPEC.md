@@ -25,10 +25,10 @@ Newest at the bottom. Superseded decisions are kept (struck through) so the hist
 | D8 | Activity types and supplements are **archived, never deleted**. | History stays intact. |
 | D9 | Units: pounds, miles, minutes, °F. | US units. |
 | D10 | Tapping an activity logs it immediately; details are an optional "Add details" section on the confirmation screen. | 2 taps to log. |
-| D11 | Calendar: blue dot = at least one workout; sage-green dot = at least one supplement checked. The green dot can be hidden with a toggle (remembered on the phone). | As requested; "any supplement" is easy to change to "all". |
+| D11 | Calendar: blue dot = at least one workout; orange dot (was sage green, see D35) = at least one supplement checked. The green dot can be hidden with a toggle (remembered on the phone). | As requested; "any supplement" is easy to change to "all". |
 | D12 | The calendar week starts on the day your phone's region uses (Sunday in the US). | Respects phone settings. |
 | ~~D13~~ | ~~SwiftUI `.sensoryFeedback` haptics.~~ Superseded by D23. | |
-| D14 | Warm theme: cream background, white rounded cards (22 px corners), coral accent, soft blue and sage dots; dark versions of every color, following the phone's setting. | "Warm and inviting" + light/dark. |
+| ~~D14~~ | ~~Warm theme~~ (superseded by D35): cream background, white rounded cards (22 px corners), coral accent, soft blue and sage dots; dark versions of every color, following the phone's setting. | "Warm and inviting" + light/dark. |
 | ~~D15~~ | ~~Swift Testing.~~ Superseded by D24. | |
 | ~~D16~~ | ~~Stats pre-filled in code.~~ Superseded by D30. | |
 | D17 | Calorie target = Mifflin–St Jeor BMR × 1.375 (3–4 workouts/week) × 0.85 (15% deficit), rounded to the nearest 10. Protein = 0.85 g per lb of current weight; fat = 25% of calories; carbs = the rest *(Milestone 2)*. | Matches the owner's agreed starting targets (numbers kept off the public repo, see D30). |
@@ -49,6 +49,10 @@ Newest at the bottom. Superseded decisions are kept (struck through) so the hist
 | D32 | Renamed the app from HealthNut to **Momentum** everywhere (app name, repo `momentum`, folder, database `momentum`). | Owner's choice. Done before first install, so changing the database name lost no data. From now on the database name is fixed (D20). |
 | D33 | **Prototype first, then publish.** Changes are tried in a private claude.ai prototype (the same app code plus a bar with "Add sample data" / "Clear", built by `tools/prototype/build.sh`). Only after the owner approves are they pushed to GitHub and the phone. | Lets the owner try changes safely without touching the real app or its data. |
 | D34 | Delete confirmations are built into the page (Keep / Delete) instead of the browser's pop-up `confirm()`. | Pop-ups are blocked in the prototype and look out of place in an app. |
+| D35 | **Fresh theme** (prototype v2): crisp off-white with a hint of green, emerald for progress/actions, **blue = workouts, orange = supplements** (strongly contrasting, colour-blind friendly), rounded iPhone font for headings, smaller type, lighter cards. New rising-line icon. | Owner asked for cleaner, less large, fresh and motivating, with contrasting dots. |
+| D36 | Motivation on Today: an encouraging line, a "This week" strip with a goal bar (default **4 workouts/week**, editable in Milestone 2), and a streak chip from 2 days up. A streak still counts until midnight if you worked out yesterday. | Encouraging and motivating. |
+| D37 | **One-tap logging:** activity chips on Today log immediately and open the confirmation (details / log another / undo). The activity grid remains for logging onto calendar days. | Fewer taps. |
+| D38 | Supplements show as a compact two-column grid. | Cleaner and shorter. |
 
 ## 2. File structure
 
@@ -73,6 +77,7 @@ Momentum/
 │       │   ├── daykey.js        Date ⇄ YYYYMMDD
 │       │   ├── monthgrid.js     calendar cells + weekday letters
 │       │   ├── numbers.js       pace, number ⇄ text
+│       │   ├── progress.js      weekly goal, streaks, encouraging messages
 │       │   ├── text.js          safe HTML text, plurals
 │       │   └── workouts.js      activity kinds, defaults, summary line
 │       ├── ui/              building blocks: sheets, haptics, icons, date formatting
@@ -82,6 +87,7 @@ Momentum/
 ├── tests/               ← npm test
 │   ├── daykey.test.js
 │   ├── monthgrid.test.js
+│   ├── progress.test.js
 │   └── numbers.test.js
 └── ios-native/          ← earlier SwiftUI version (unused, see D28)
 ```
