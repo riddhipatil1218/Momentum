@@ -47,6 +47,8 @@ Newest at the bottom. Superseded decisions are kept (struck through) so the hist
 | D30 | **No personal stats or targets anywhere in the repo** (code, tests, docs). A first-launch setup screen asks for sex, age, height, weight, activity and goal weight; they're stored only on the phone. Tests use made-up example people. *(Milestone 2)* | The repo is public (D31). |
 | D31 | Hosting: **GitHub Pages** from a public repo. A GitHub Actions workflow (`.github/workflows/publish.yml`) runs `npm test` on every push and publishes `app/` only if all tests pass. | Free and reliable; broken versions never reach the phone. |
 | D32 | Renamed the app from HealthNut to **Momentum** everywhere (app name, repo `momentum`, folder, database `momentum`). | Owner's choice. Done before first install, so changing the database name lost no data. From now on the database name is fixed (D20). |
+| D33 | **Prototype first, then publish.** Changes are tried in a private claude.ai prototype (the same app code plus a bar with "Add sample data" / "Clear", built by `tools/prototype/build.sh`). Only after the owner approves are they pushed to GitHub and the phone. | Lets the owner try changes safely without touching the real app or its data. |
+| D34 | Delete confirmations are built into the page (Keep / Delete) instead of the browser's pop-up `confirm()`. | Pop-ups are blocked in the prototype and look out of place in an app. |
 
 ## 2. File structure
 
@@ -76,6 +78,7 @@ Momentum/
 │       ├── ui/              building blocks: sheets, haptics, icons, date formatting
 │       └── views/           screens: today, calendar, dayDetail, logWorkout,
 │                            editWorkout, workoutFields, dayCards, comingSoon
+├── tools/prototype/     ← builds the claude.ai prototype (not part of the app)
 ├── tests/               ← npm test
 │   ├── daykey.test.js
 │   ├── monthgrid.test.js
@@ -171,7 +174,7 @@ New stores only, so existing data is untouched:
   The confirmation screen offers "Add details (optional)", "Log another workout" and "Undo".
 - **Details by kind**: duration (with 20/30/45/60/75 min quick picks) for all; running → distance + live pace;
   stair master → level, floors; strength → body focus chips + notes; hot yoga → temperature °F; others → notes.
-- **Editing**: tap any workout to change its date/time and details, or delete it (with confirmation).
+- **Editing**: tap any workout to change its date/time and details, or delete it (Delete → Keep / Delete).
 - **Calendar**: month grid, arrows or swipe to change month, "Today" button, today circled in coral,
   dots under days, legend + supplement-dot toggle, monthly workout count. Tap a day → sheet with that
   day's workouts (edit/delete/add) and its supplement checklist (past days editable).

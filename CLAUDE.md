@@ -20,6 +20,13 @@ Read `SPEC.md` first. It holds the data model, milestones and the decisions log.
 - Preview: `npm start`, then open http://localhost:8000 (needs python3).
 - Units: lb, miles, minutes, °F.
 
+## Change workflow (SPEC D33)
+1. Make the change in `app/` (+ tests), run `npm test`, check it phone-sized in light and dark.
+2. `bash tools/prototype/build.sh`, then republish the prototype to the SAME claude.ai artifact
+   (https://claude.ai/artifact/7YVDwKq4nbXLQAwYpThENj) so the owner can try it.
+3. Only after the owner approves: commit and push to `main`; GitHub tests and publishes it.
+- Never use `alert()`/`confirm()`/`prompt()`; build confirmations into the page.
+
 ## Data safety rules (never break these)
 1. The IndexedDB name is `momentum`. Never change it.
 2. Never edit or remove an entry in `MIGRATIONS` (db.js). To change the data, append a new

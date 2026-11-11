@@ -30,6 +30,13 @@ export async function openEditWorkout(workoutId) {
         ${workoutFieldsHTML(workout)}
         <div class="form-group">
           <button class="form-row destructive" data-delete>${icons.trash} Delete workout</button>
+          <div class="form-row confirm-row" data-confirm hidden>
+            <span>Delete this workout?</span>
+            <span class="confirm-buttons">
+              <button class="chip" data-cancel-delete>Keep</button>
+              <button class="chip danger" data-confirm-delete>Delete</button>
+            </span>
+          </div>
         </div>`;
 
       bindWorkoutFields(body, workout);
@@ -42,8 +49,16 @@ export async function openEditWorkout(workoutId) {
         saveWorkout(workout);
       });
 
-      body.querySelector('[data-delete]').addEventListener('click', async () => {
-        if (!confirm(`Delete this ${workout.activityName} workout?`)) return;
+      // Deleting asks first, right in the sheet (pop-up dialogs aren't reliable everywhere).
+      const deleteButton = body.querySelector('[data-delete]');
+      const confirmRow = body.querySelector('[data-confirm]');
+      const showConfirm = (show) => {
+        deleteButton.hidden = show;
+        confirmRow.hidden = !show;
+      };
+      deleteButton.addEventListener('click', () => showConfirm(true));
+      body.querySelector('[data-cancel-delete]').addEventListener('click', () => showConfirm(false));
+      body.querySelector('[data-confirm-delete]').addEventListener('click', async () => {
         sheet.close();
         await deleteWorkout(workout.id);
       });

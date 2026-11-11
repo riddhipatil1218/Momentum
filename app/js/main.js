@@ -87,8 +87,8 @@ async function start() {
 }
 
 // Offline support: lets the app open without internet once it has loaded before.
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('./sw.js').catch(() => { /* not available here — fine */ });
-}
+try {
+  navigator.serviceWorker?.register('./sw.js').catch(() => { /* not available here — fine */ });
+} catch { /* some previews block service workers — the app still works */ }
 
 start();

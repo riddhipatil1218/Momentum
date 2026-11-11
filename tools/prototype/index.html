@@ -1,0 +1,34 @@
+<!-- Prototype page: the real Momentum app plus a bar for sample data.
+     Built by tools/prototype/build.sh and published as a private preview on claude.ai.
+     (No <html>/<head>/<body> tags: the preview host adds those.) -->
+<title>Momentum Prototype</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="css/styles.css">
+<style>
+  .proto-bar {
+    max-width: 560px; margin: 0 auto;
+    padding-block: 10px 0;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    font-size: 13px; color: var(--text-2);
+  }
+  .proto-bar strong { color: var(--accent); font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+  .proto-bar .grow { flex: 1; min-width: 120px; }
+  .proto-bar button {
+    padding: 6px 12px; border-radius: 999px; background: var(--fill);
+    font-size: 13px; font-weight: 650; color: var(--text);
+  }
+  .proto-bar button.warn { background: var(--danger); color: #fff; }
+  .proto-bar + .view { padding-top: 4px; }
+</style>
+<div class="proto-bar" id="proto-bar">
+  <strong>Prototype</strong>
+  <span class="grow">Separate from your phone's app</span>
+  <button id="proto-sample" type="button">Add sample data</button>
+  <button id="proto-clear" type="button">Clear</button>
+</div>
+<main id="view" class="view" aria-live="polite"></main>
+<nav id="tab-bar" class="tab-bar" aria-label="Tabs"></nav>
+<script type="module" src="js/main.js"></script>
+<script type="module" src="prototype.js"></script>
