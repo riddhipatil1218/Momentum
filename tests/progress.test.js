@@ -42,14 +42,14 @@ test('streak across a month boundary', () => {
 test('encouragement picks the most relevant message', () => {
   assert.match(encouragement({ workedOutToday: true, weekCount: 4, goal: 4 }), /goal reached/i);
   assert.match(encouragement({ workedOutToday: true, weekCount: 2, goal: 4 }), /showed up today/);
-  assert.match(encouragement({ workedOutToday: false, weekCount: 2, goal: 4, streak: 3 }), /3-day streak/);
+  assert.match(encouragement({ workedOutToday: false, weekCount: 2, goal: 4, streak: 3 }), /Keep your streak going/);
   assert.match(encouragement({ workedOutToday: false, weekCount: 3, goal: 4 }), /^1 more workout to/);
   assert.match(encouragement({ workedOutToday: false, weekCount: 1, goal: 4 }), /^3 more workouts to/);
   assert.match(encouragement({ workedOutToday: false, weekCount: 0, goal: 4 }), /still counts/);
 });
 
 test('cheer after logging', () => {
-  assert.equal(loggedCheer(2, 4), 'That’s 2 of 4 this week 🎉');
+  assert.equal(loggedCheer(2, 4), 'That’s 2 of 4 this week.');
   assert.match(loggedCheer(4, 4), /Goal reached/);
   assert.match(loggedCheer(5, 4), /Above and beyond/);
 });

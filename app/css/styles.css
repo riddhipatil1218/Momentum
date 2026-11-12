@@ -749,7 +749,14 @@ body[data-tab="macros"] .view { padding-bottom: calc(var(--tabbar-height) + env(
 
 /* ---- Calorie balance ------------------------------------------------------------------ */
 
-.streak-chip.muted { color: var(--text-2); }
+/* One shared style for every streak label (Today and Dashboard). */
+.streak-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.streak-pill {
+  display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 999px;
+  font-size: 12px; font-weight: 700; white-space: nowrap;
+  background: var(--workout-soft); color: var(--workout);
+}
+.streak-pill.muted { background: var(--fill); color: var(--text-2); }
 .deficit-chip {
   display: inline-flex; align-items: center; gap: 6px; margin-top: 8px;
   padding: 5px 10px; border-radius: 999px; font-size: 13px; font-weight: 650;

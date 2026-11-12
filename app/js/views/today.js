@@ -45,14 +45,17 @@ export async function renderToday(root, { isCurrent }) {
         <h1>${greeting()}</h1>
         <p class="header-date">${formatLongDate(new Date())}</p>
         <p class="encouragement">${monoEmoji(escapeHTML(message))}</p>
-        ${balance?.streak ? `<p class="deficit-chip"><span class="mono">🔥</span> ${balance.streak}-day calorie deficit streak</p>` : ''}
+        ${streak || balance?.streak ? `
+          <div class="streak-row" aria-label="Streaks">
+            ${streak ? `<span class="streak-pill">${streak}-day workout streak</span>` : ''}
+            ${balance?.streak ? `<span class="streak-pill">${balance.streak}-day deficit streak</span>` : ''}
+          </div>` : ''}
       </div>
     </header>
 
     <section class="card week-card" aria-label="This week">
       <div class="card-header">
         <h3>This week</h3>
-        ${streak >= 2 ? `<span class="streak-chip"><span class="mono">🔥</span> ${streak}-day streak</span>` : ''}
       </div>
       <div class="week-strip">
         ${week.map((key, i) => {

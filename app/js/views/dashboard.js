@@ -85,7 +85,6 @@ export async function renderDashboard(root, { isCurrent }) {
 
       <p class="footnote">“On target” means within ${Math.round(TOLERANCE * 100)}% of your goal. Change your targets in Settings.</p>` : `
       <section class="card coming-soon">
-        <div class="coming-soon-emoji mono">🎯</div>
         <h2>Set your daily targets</h2>
         <p>Add your stats in Settings to get calorie and macro targets. Your progress shows up here.</p>
       </section>`}`;
@@ -130,7 +129,7 @@ function balanceCardHTML(data, days) {
     <section class="card balance-card" aria-label="Calorie balance">
       <div class="card-header">
         <h3>Calorie balance</h3>
-        <span class="streak-chip ${streak ? '' : 'muted'}"><span class="mono">🔥</span> ${streak
+        <span class="streak-pill ${streak ? '' : 'muted'}">${streak
           ? `${streak}-day deficit streak` : 'No deficit streak yet'}</span>
       </div>
 

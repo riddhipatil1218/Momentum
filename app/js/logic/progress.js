@@ -27,21 +27,21 @@ export function workoutStreak(workoutDays, todayKey) {
 
 /** One short, encouraging line based on how the week is going. */
 export function encouragement({ workedOutToday, weekCount, goal = WEEKLY_WORKOUT_GOAL, streak = 0 }) {
-  if (weekCount >= goal) return "Weekly goal reached. You're on fire 🏆";
-  if (workedOutToday) return 'You showed up today. That’s how momentum builds 💪';
-  if (streak >= 2) return `${streak}-day streak. Keep it going today 🔥`;
+  if (weekCount >= goal) return "Weekly goal reached. You're on fire.";
+  if (workedOutToday) return 'You showed up today. That’s how momentum builds.';
+  if (streak >= 2) return 'Keep your streak going today.';
   if (weekCount > 0) {
     const left = goal - weekCount;
     return `${left} more workout${left === 1 ? '' : 's'} to hit this week’s goal`;
   }
-  return 'A short workout still counts. Let’s go ✨';
+  return 'A short workout still counts. Let’s go.';
 }
 
 /** Cheer shown right after logging a workout. */
 export function loggedCheer(weekCount, goal = WEEKLY_WORKOUT_GOAL) {
-  if (weekCount === goal) return `That’s ${weekCount} this week. Goal reached! 🏆`;
-  if (weekCount > goal) return `That’s ${weekCount} this week. Above and beyond 🌟`;
-  return `That’s ${weekCount} of ${goal} this week 🎉`;
+  if (weekCount === goal) return `That’s ${weekCount} this week. Goal reached!`;
+  if (weekCount > goal) return `That’s ${weekCount} this week. Above and beyond.`;
+  return `That’s ${weekCount} of ${goal} this week.`;
 }
 
 /** The longest run of consecutive days (in `orderedDays`) that are in `doneDays`. */

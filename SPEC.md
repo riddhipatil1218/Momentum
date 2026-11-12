@@ -88,6 +88,8 @@ Newest at the bottom. Superseded decisions are kept (struck through) so the hist
 | D71 | **Photos**: attach a photo of a plate, menu item or nutrition label from the Macros message box; it's shrunk to ≤1,280 px JPEG on the phone and sent to Claude (labels are read exactly × servings eaten). | Most accurate for packaged foods. |
 | D72 | Estimate effort raised from low to **medium** for accuracy (~2–3¢ per estimate before searches). | Owner asked for more accurate estimates. |
 | D73 | Macros tab order: today's totals → **Today's meals** (grouped into Breakfast <11am, Lunch 11–3, Dinner 5–10pm, Snacks otherwise, each with a subtotal) → Log again → "Estimate a meal" chat. Meals can be moved to another time in their edit sheet (which also moves the section/day). | Owner asked for meals above Log again and more sections. |
+| D74 | Streaks are shown the same way everywhere: one line on Today under the encouraging message with matching labels ("2-day workout streak", "1-day deficit streak"; each shown from 1 day), and the same label style on the Dashboard. | Owner asked for standardized streak messages. |
+| D75 | **No emoji outside workouts.** Emoji appear only as workout-type icons (chips, workout rows, the log picker, workouts-by-type). Messages, streaks and empty states use plain text; plain symbols (✓ ↑ ↓ ★) stay. Supersedes D40's emoji in messages. | Owner's request. |
 
 ## 2. File structure
 
