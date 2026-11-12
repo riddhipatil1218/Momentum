@@ -1,5 +1,7 @@
 # Momentum
 
+**Want your own copy to customize?** See [docs/MAKE-YOUR-OWN.md](docs/MAKE-YOUR-OWN.md).
+
 Your personal workout, supplement and macro tracker: a web app you add to your iPhone's
 Home Screen. No Xcode needed.
 

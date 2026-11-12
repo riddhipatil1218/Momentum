@@ -25,6 +25,8 @@ Read `SPEC.md` first. It holds the data model, milestones and the decisions log.
    `tools/e2e/`; add or update checks for what you changed), check it phone-sized in light and dark.
 2. `bash tools/prototype/build.sh`, then republish the prototype to the SAME claude.ai artifact
    (https://claude.ai/artifact/7YVDwKq4nbXLQAwYpThENj) so the owner can try it.
+   **In a fork** (see docs/MAKE-YOUR-OWN.md) that link belongs to someone else: publish a new
+   private prototype for the fork's owner and replace this link with it.
 3. Only after the owner approves: commit and push to `main`; GitHub tests and publishes it.
 - Never use `alert()`/`confirm()`/`prompt()`; build confirmations into the page.
 

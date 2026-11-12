@@ -97,6 +97,7 @@ Newest at the bottom. Superseded decisions are kept (struck through) so the hist
 | D80 | **Weight kept minor** (owner logs about every 2 weeks): Dashboard card with latest weight, change since the first weigh-in, lb to goal, a small chart (goal line + dashed projection), pace and estimated goal date, and "Next weigh-in" (14 days after the last). Because weigh-ins are far apart, the trend is a straight-line fit through weigh-ins in the last ~4 weeks (30 days) instead of a 7-day average; it needs two weigh-ins ≥10 days apart, otherwise "Not enough data yet". Losing vs gaining is judged from the highest weight seen. Weigh-ins can be viewed and deleted (Keep/Delete). | Fits a biweekly habit; replaces the planned 7-day average. |
 | D81 | The newest weigh-in updates the weight in your stats; daily targets don't change by themselves. Calorie burn for each day uses the latest weigh-in on or before that day. | More accurate burn without surprising target changes. |
 | D82 | **Click-through tests saved in the repo** (`tools/e2e/`, run with `npm run e2e`): 7 suites, 100 checks, covering database upgrades, Today, Calendar, Macros (fake Anthropic server), Dashboard (calorie math, "why", weight), backup/restore on a fresh "phone", and the prototype build. Playwright is installed separately with `npm install --no-save playwright` so the app stays library-free; GitHub's publish step still runs only the fast `npm test`. | Keeps the checks for future sessions and for the owner to rerun. |
+| D83 | `docs/MAKE-YOUR-OWN.md`: a step-by-step guide for a friend to fork the repo, turn on GitHub Pages and Actions, install it, add her own API key, and customize (in-app settings, editing files on GitHub: colors, quotes and their test rules, name, icon, defaults; Claude Code for bigger changes), plus syncing, troubleshooting and privacy. CLAUDE.md tells a fork to make its own prototype page. | Owner wants friends to be able to make their own version. |
 
 ## 2. File structure
 
@@ -105,6 +106,7 @@ Momentum/
 ├── SPEC.md              ← this spec + decisions log
 ├── CLAUDE.md            ← rules for AI assistants working on the code
 ├── README.md            ← how to preview, test and put it on your phone
+├── docs/MAKE-YOUR-OWN.md ← guide for friends: fork it, publish it, customize it
 ├── .github/workflows/publish.yml  ← runs tests, then publishes app/ to GitHub Pages
 ├── package.json         ← just the "npm test" / "npm start" shortcuts (no dependencies)
 ├── app/                 ← THE APP (this folder is what gets published)
