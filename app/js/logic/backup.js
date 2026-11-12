@@ -12,7 +12,7 @@ export const BACKUP_FORMAT = 1;
 export const BACKUP_STORES = ['activityTypes', 'supplements', 'workouts', 'supplementLogs', 'meals', 'savedMeals'];
 
 /** Settings (meta keys) included in a backup. The API key is deliberately not in this list. */
-export const BACKUP_META_KEYS = ['profile', 'targets', 'weeklyGoal', 'setup.done', 'seeded.v1'];
+export const BACKUP_META_KEYS = ['profile', 'targets', 'weeklyGoal', 'setup.done', 'seeded.v1', 'webLookup'];
 
 export function buildBackup(storeData, meta, exportedAt = new Date()) {
   const data = {};

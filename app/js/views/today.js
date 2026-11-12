@@ -8,6 +8,7 @@ import { preferredFirstWeekday, weekdayLetters } from '../logic/monthgrid.js';
 import { encouragement, weekDayKeys, workoutStreak } from '../logic/progress.js';
 import { escapeHTML, monoEmoji } from '../logic/text.js';
 import { formatLongDate, greeting } from '../ui/format.js';
+import { loadBalances } from './balanceData.js';
 import { handleDayCardTap, loadDay, supplementsCardHTML, workoutsCardHTML } from './dayCards.js';
 import { openLogWorkout } from './logWorkout.js';
 
@@ -17,11 +18,12 @@ export async function renderToday(root, { isCurrent }) {
   const firstWeekday = preferredFirstWeekday();
   const week = weekDayKeys(today, firstWeekday);
 
-  const [{ workouts, supplements, takenIds }, activities, recent, goal] = await Promise.all([
+  const [{ workouts, supplements, takenIds }, activities, recent, goal, balance] = await Promise.all([
     loadDay(today),
     activeActivities(),
     workoutsBetween(addDays(today, -60), today), // enough history for streaks
     getWeeklyGoal(),
+    loadBalances(),
   ]);
   if (!isCurrent()) return;
 
@@ -43,6 +45,7 @@ export async function renderToday(root, { isCurrent }) {
         <h1>${greeting()}</h1>
         <p class="header-date">${formatLongDate(new Date())}</p>
         <p class="encouragement">${monoEmoji(escapeHTML(message))}</p>
+        ${balance?.streak ? `<p class="deficit-chip"><span class="mono">🔥</span> ${balance.streak}-day calorie deficit streak</p>` : ''}
       </div>
     </header>
 

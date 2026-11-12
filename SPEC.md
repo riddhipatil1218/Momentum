@@ -4,7 +4,7 @@ A personal app (one user, one iPhone) for logging workouts, supplements, meals/m
 and weight. It's a **web app**: you add it to the iPhone Home Screen and it runs full
 screen like a regular app. All data is stored on the phone.
 
-Status: **Milestones 1–3 live on the phone. Dashboard, Backup & restore, calendar redesign and Today updates in the prototype, awaiting review.** Sections marked
+Status: **Milestones 1–4 + Backup live on the phone. Calorie balance, smarter meal estimates and the Macros layout in the prototype, awaiting review.** Sections marked
 *(planned)* are proposals for later milestones and will be confirmed before they're built.
 
 ---
@@ -82,6 +82,12 @@ Newest at the bottom. Superseded decisions are kept (struck through) so the hist
 | D65 | Spreadsheet export: three CSV files (workouts, meals, supplement check-ins), oldest first; formula-like cells are prefixed with ' so spreadsheet apps don't run them. | Data you can open in Numbers/Excel/Sheets. |
 | D66 | Calendar redesign: large rounded day cells, workout days tinted burgundy with dots, today in plum; "<Month> at a glance" tiles (workouts, active days, best streak, supplement days) in burgundy/plum/mauve/rose; workouts-by-type bars; tap the month name to jump to any month/year. Mauve added as a color token. | Bigger, easier to read, more color, more useful. |
 | D67 | Today's "This week" strip shows each day's date and, under it, the names of that day's workouts in small text. Supplements offer both **Check all** and **Uncheck all**. | Owner's request. |
+| D68 | **Calorie balance**: burned = BMR × 1.2 (stats; everyday life) + each logged workout's calories; balance = burned − eaten (positive = deficit). 1.2 instead of the activity level so workouts aren't counted twice. Workout kcal = (MET − 1) × kg × hours, MET by activity name (running by pace), 45 min assumed when no duration (shown). Days without meals are unknown. **Deficit streak** counts days in a row in a deficit from yesterday back (today isn't over). Shown on the Dashboard (today's kcal left, burn breakdown, 7-day bars, week total ≈ lb at 3,500 kcal/lb) and as a chip on Today. | Owner asked for deficit + streak using stats, food and workouts together. |
+| D69 | Meal estimates now come back through a **strict tool** (`record_meal_estimate`, schema-guaranteed) instead of `output_config.format`. Each reply starts by answering the previous tool call (`tool_result`). | Anthropic's docs: web search always adds citations, which can't be combined with `output_config.format`. |
+| D70 | **Online lookups**: Claude may use web search (basic `web_search_20250305`, max 3 per reply) for named restaurants, chains and branded/packaged products, preferring official nutrition pages; generic foods aren't searched. Sources are shown as links on the card, plus a "Based on" line. On by default; toggle in Settings. If an account rejects web search, the request is retried without it. Long searches that pause (`pause_turn`) are continued automatically. | Owner asked for restaurant and packaged-food data. ~1¢ per search. |
+| D71 | **Photos**: attach a photo of a plate, menu item or nutrition label from the Macros message box; it's shrunk to ≤1,280 px JPEG on the phone and sent to Claude (labels are read exactly × servings eaten). | Most accurate for packaged foods. |
+| D72 | Estimate effort raised from low to **medium** for accuracy (~2–3¢ per estimate before searches). | Owner asked for more accurate estimates. |
+| D73 | Macros tab order: today's totals → **Today's meals** (grouped into Breakfast <11am, Lunch 11–3, Dinner 5–10pm, Snacks otherwise, each with a subtotal) → Log again → "Estimate a meal" chat. Meals can be moved to another time in their edit sheet (which also moves the section/day). | Owner asked for meals above Log again and more sections. |
 
 ## 2. File structure
 
@@ -112,18 +118,21 @@ Momentum/
 │       │   ├── mealEstimate.js  AI prompt, JSON schema, request/response, errors
 │       │   ├── goals.js         under / on target / over, 7-day grid
 │       │   ├── backup.js        backup file build/check, CSV
+│       │   ├── energy.js        calorie burn (stats + workouts), balance, deficit streak
 │       │   ├── progress.js      weekly goal, streaks, encouraging messages
 │       │   ├── text.js          safe HTML text, plurals
 │       │   └── workouts.js      activity kinds, defaults, summary line
 │       ├── services/        anthropic.js: the only network call (meal estimates)
-│       ├── ui/              building blocks: sheets, haptics, icons, date formatting, press-and-hold
+│       ├── ui/              building blocks: sheets, haptics, icons, date formatting, press-and-hold,
+│                            toast, photo (shrinks photos before sending)
 │       └── views/           screens: today, calendar, dayDetail, logWorkout,
 │                            editWorkout, workoutFields, dayCards, manage (list editors),
 │                            onboarding (welcome), settings, statsForm, macros, mealCards,
-│                            dashboard, backupView, comingSoon
+│                            dashboard, balanceData, backupView, comingSoon
 ├── tools/prototype/     ← builds the claude.ai prototype (not part of the app)
 ├── tests/               ← npm test
 │   ├── daykey.test.js
+│   ├── energy.test.js
 │   ├── goals-backup.test.js
 │   ├── meals.test.js
 │   ├── monthgrid.test.js

@@ -144,23 +144,42 @@ function demoEstimate(text) {
 globalThis.momentumDemoEstimator = async (messages) => {
   await new Promise((resolve) => setTimeout(resolve, 900)); // feel like a real request
   // Use every message in this meal's conversation, later amounts winning.
-  const userTexts = messages.filter((m) => m.role === 'user').map((m) => String(m.content));
+  const userTurns = messages.filter((m) => m.role === 'user');
+  const textOf = (content) => (Array.isArray(content)
+    ? content.filter((b) => b.type === 'text').map((b) => b.text).join(' ')
+    : String(content));
+  const hasPhoto = userTurns.some((m) => Array.isArray(m.content) && m.content.some((b) => b.type === 'image'));
   const byName = new Map();
-  for (const text of userTexts) for (const item of demoEstimate(text)) byName.set(item.name, item);
+  for (const turn of userTurns) for (const item of demoEstimate(textOf(turn.content))) byName.set(item.name, item);
   const items = [...byName.values()];
-  const isFood = items.length > 0;
   const sum = (key) => items.reduce((total, i) => total + i[key], 0);
-  const estimate = {
-    name: isFood ? items.slice(0, 3).map((i) => i.name).join(', ').replace(/^./, (c) => c.toUpperCase()) : 'Not a meal',
-    calories: Math.round(sum('kcal') / 5) * 5,
-    proteinG: Math.round(sum('p')),
-    carbsG: Math.round(sum('c')),
-    fatG: Math.round(sum('f')),
-    confidence: isFood ? 'medium' : 'low',
-    assumptions: isFood
-      ? items.map((i) => `${i.qty} × ${i.portion} ${i.name} (~${Math.round(i.kcal)} kcal)`)
-      : ['The demo only knows a few foods (eggs, toast, chicken, rice, yogurt, banana, salmon…). The real app understands any meal.'],
-    isFood,
+
+  let estimate;
+  if (items.length) {
+    estimate = {
+      name: items.slice(0, 3).map((i) => i.name).join(', ').replace(/^./, (c) => c.toUpperCase()),
+      calories: Math.round(sum('kcal') / 5) * 5, proteinG: Math.round(sum('p')), carbsG: Math.round(sum('c')), fatG: Math.round(sum('f')),
+      confidence: 'medium',
+      assumptions: items.map((i) => `${i.qty} × ${i.portion} ${i.name} (~${Math.round(i.kcal)} kcal)`),
+      basis: 'Demo food list', isFood: true,
+    };
+  } else if (hasPhoto) {
+    estimate = {
+      name: 'Meal from photo', calories: 450, proteinG: 25, carbsG: 45, fatG: 18, confidence: 'low',
+      assumptions: ['The demo can’t read photos; the real app reads plates and nutrition labels.'],
+      basis: 'Demo placeholder', isFood: true,
+    };
+  } else {
+    estimate = {
+      name: 'Not a meal', calories: 0, proteinG: 0, carbsG: 0, fatG: 0, confidence: 'low', basis: '', isFood: false,
+      assumptions: ['The demo only knows a few foods (eggs, toast, chicken, rice, yogurt, banana, salmon…). The real app understands any meal, looks up restaurants and brands, and reads photos.'],
+    };
+  }
+  const toolUseId = `demo_${Date.now()}`;
+  return {
+    estimate,
+    toolUseId,
+    sources: [],
+    assistantContent: [{ type: 'tool_use', id: toolUseId, name: 'record_meal_estimate', input: estimate }],
   };
-  return { estimate, assistantContent: [{ type: 'text', text: JSON.stringify(estimate) }] };
 };

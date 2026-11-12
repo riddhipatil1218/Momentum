@@ -31,3 +31,24 @@ export function macroLine(m) {
   return `${Math.round(m.calories).toLocaleString()} kcal · ${Math.round(m.proteinG)}P · ` +
          `${Math.round(m.carbsG)}C · ${Math.round(m.fatG)}F`;
 }
+
+/** Which part of the day a meal belongs to, from the time it was logged. */
+export function mealSection(date) {
+  const hour = new Date(date).getHours();
+  if (hour >= 4 && hour < 11) return 'Breakfast';
+  if (hour >= 11 && hour < 15) return 'Lunch';
+  if (hour >= 17 && hour < 22) return 'Dinner';
+  return 'Snacks';
+}
+
+export const MEAL_SECTIONS = ['Breakfast', 'Lunch', 'Dinner', 'Snacks'];
+
+/** Groups meals into [{ section, meals, totals }] in day order, skipping empty sections. */
+export function groupMealsBySection(meals) {
+  return MEAL_SECTIONS
+    .map((section) => {
+      const inSection = meals.filter((m) => mealSection(m.date) === section);
+      return { section, meals: inSection, totals: dayTotals(inSection) };
+    })
+    .filter((group) => group.meals.length);
+}

@@ -250,3 +250,15 @@ export async function restoreFromBackup(backup) {
 
 export const getLastBackupAt = () => db.getMeta('lastBackupAt');
 export const markBackedUp = () => db.setMeta('lastBackupAt', new Date().toISOString());
+
+/** Whether Claude may search the web for restaurant/packaged-food nutrition (on by default). */
+export async function getWebLookup() {
+  return (await db.getMeta('webLookup')) ?? true;
+}
+export const saveWebLookup = (on) => db.setMeta('webLookup', on);
+
+/** Changes a meal's time and keeps its day in sync. */
+export function moveMeal(meal, newDate) {
+  meal.date = newDate.toISOString();
+  meal.dayKey = dayKeyFromDate(newDate);
+}

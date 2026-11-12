@@ -41,7 +41,9 @@ Read `SPEC.md` first. It holds the data model, milestones and the decisions log.
   Never hard-code it, log it, or put it in any file, test or commit. Exclude it from export.
 - `app/js/services/anthropic.js` is the only network call. It sends the key only to
   api.anthropic.com. Request shape lives in `logic/mealEstimate.js` (model `claude-opus-5-5`,
-  structured outputs, effort low, fallback on) and is unit tested. Don't send `temperature`.
+  strict `record_meal_estimate` tool + optional `web_search`, effort medium, fallback on) and is
+  unit tested. Don't send `temperature`, `tool_choice` any/tool, or `output_config.format`
+  (incompatible with web-search citations). Send assistant turns back unchanged.
 - Test the Macros flow with Playwright by routing `https://api.anthropic.com/v1/messages`
   to a fake response; never use a real key in tests.
 

@@ -5,7 +5,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { dayTotals, macroLine, mealKey, sortSavedMeals } from '../app/js/logic/meals.js';
 import { buildHeaders, buildRequestBody, editedNote, EstimateError, friendlyError, isFallbackRejection,
-         MODEL, normalizeEstimate, parseEstimateResponse } from '../app/js/logic/mealEstimate.js';
+         isWebSearchRejection, MODEL, normalizeEstimate, parseEstimateResponse, searchSources, userTurnContent }
+  from '../app/js/logic/mealEstimate.js';
 
 // ---- Macro totals -------------------------------------------------------------------
 
@@ -47,14 +48,22 @@ test('favorites come first, then most recently used', () => {
 
 // ---- Request shape ----------------------------------------------------------------------
 
-test('request asks for structured JSON from the right model', () => {
+test('request uses the strict estimate tool, web search, and the right model', () => {
   const body = buildRequestBody([{ role: 'user', content: '2 eggs' }]);
   assert.equal(body.model, MODEL);
-  assert.equal(body.output_config.format.type, 'json_schema');
-  assert.equal(body.output_config.format.schema.additionalProperties, false);
-  assert.ok(body.output_config.format.schema.required.includes('assumptions'));
+  const [tool, search] = body.tools;
+  assert.equal(tool.name, 'record_meal_estimate');
+  assert.equal(tool.strict, true);
+  assert.equal(tool.input_schema.additionalProperties, false);
+  assert.ok(tool.input_schema.required.includes('basis'));
+  assert.equal(search.type, 'web_search_20250305');
+  assert.equal(search.max_uses, 3);
+  assert.equal(body.output_config.effort, 'medium');
+  assert.equal('format' in body.output_config, false); // can't be combined with web-search citations
   assert.equal(body.fallbacks, 'default');
-  assert.equal('temperature' in body, false); // rejected by the current API version
+  assert.equal('temperature' in body, false);
+  assert.equal('tool_choice' in body, false); // forced tool choice isn't allowed on this model
+  assert.equal(buildRequestBody([], { webLookup: false }).tools.length, 1);
   assert.equal('fallbacks' in buildRequestBody([], { withFallback: false }), false);
 });
 
@@ -66,38 +75,64 @@ test('headers carry the key only in x-api-key and allow browser access', () => {
   assert.equal('anthropic-beta' in buildHeaders('k', { withFallback: false }), false);
 });
 
+test('a reply answers the previous tool call first, and photos go before the text', () => {
+  assert.deepEqual(userTurnContent('3 eggs'), [{ type: 'text', text: '3 eggs' }]);
+  const reply = userTurnContent('make it 3 eggs', { pendingToolUseId: 'toolu_1' });
+  assert.deepEqual(reply[0], { type: 'tool_result', tool_use_id: 'toolu_1', content: 'The estimate was shown to the user.' });
+  assert.equal(reply[1].text, 'make it 3 eggs');
+  const photo = userTurnContent('', { image: { mediaType: 'image/jpeg', data: 'AAAA' } });
+  assert.equal(photo[0].type, 'image');
+  assert.equal(photo[0].source.media_type, 'image/jpeg');
+  assert.equal(photo[1].text, 'Estimate the food in this photo.');
+});
+
 // ---- Reading replies ------------------------------------------------------------------
 
-const reply = (json, extra = {}) => ({
-  stop_reason: 'end_turn',
-  content: [{ type: 'thinking', thinking: '' }, { type: 'text', text: JSON.stringify(json) }],
+const sample = {
+  name: 'Chipotle chicken bowl', calories: 652.4, protein_g: 48, carbs_g: 61, fat_g: 23.6,
+  confidence: 'high', assumptions: ['Chicken (~180 kcal)', 'White rice (~210 kcal)'], basis: 'Chipotle official nutrition', is_food: true,
+};
+const reply = (input, extra = {}) => ({
+  stop_reason: 'tool_use',
+  content: [
+    { type: 'thinking', thinking: '' },
+    { type: 'server_tool_use', id: 'srv_1', name: 'web_search', input: { query: 'chipotle nutrition' } },
+    { type: 'web_search_tool_result', tool_use_id: 'srv_1', content: [
+      { type: 'web_search_result', url: 'https://www.chipotle.com/nutrition-calculator', title: 'Nutrition Calculator | Chipotle', encrypted_content: 'x' },
+      { type: 'web_search_result', url: 'https://www.chipotle.com/nutrition-calculator', title: 'duplicate', encrypted_content: 'y' },
+      { type: 'web_search_result', url: 'javascript:alert(1)', title: 'bad link', encrypted_content: 'z' },
+    ] },
+    { type: 'text', text: 'Based on Chipotle’s published nutrition…', citations: [] },
+    { type: 'tool_use', id: 'toolu_9', name: 'record_meal_estimate', input },
+  ],
   ...extra,
 });
-const sample = {
-  name: 'Eggs, toast and oat latte', calories: 512.4, protein_g: 21, carbs_g: 48, fat_g: 25.6,
-  confidence: 'medium', assumptions: ['2 large eggs (~140 kcal)', '1 slice sourdough (~120 kcal)'], is_food: true,
-};
 
-test('a good reply becomes a clean estimate, and the full content is kept for the next turn', () => {
+test('the estimate comes from the tool call; sources from the search results', () => {
   const response = reply(sample);
-  const { estimate, assistantContent } = parseEstimateResponse(response);
+  const { estimate, assistantContent, toolUseId, sources } = parseEstimateResponse(response);
   assert.deepEqual(estimate, {
-    name: 'Eggs, toast and oat latte', calories: 512, proteinG: 21, carbsG: 48, fatG: 26,
-    confidence: 'medium', assumptions: ['2 large eggs (~140 kcal)', '1 slice sourdough (~120 kcal)'], isFood: true,
+    name: 'Chipotle chicken bowl', calories: 652, proteinG: 48, carbsG: 61, fatG: 24, confidence: 'high',
+    assumptions: ['Chicken (~180 kcal)', 'White rice (~210 kcal)'], basis: 'Chipotle official nutrition', isFood: true,
   });
-  assert.equal(assistantContent, response.content); // thinking block included, unchanged
+  assert.equal(assistantContent, response.content); // kept unchanged for the next turn
+  assert.equal(toolUseId, 'toolu_9');
+  assert.deepEqual(sources, [{ title: 'Nutrition Calculator | Chipotle', url: 'https://www.chipotle.com/nutrition-calculator' }]);
 });
 
-test('refusals, cut-off and unreadable replies give friendly errors', () => {
+test('refusals, cut-off replies and missing estimates give friendly errors', () => {
   assert.throws(() => parseEstimateResponse(reply(sample, { stop_reason: 'refusal' })), EstimateError);
   assert.throws(() => parseEstimateResponse(reply(sample, { stop_reason: 'max_tokens' })), /cut short/);
-  assert.throws(() => parseEstimateResponse({ stop_reason: 'end_turn', content: [{ type: 'text', text: 'oops' }] }), /couldn’t be read/);
-  assert.throws(() => parseEstimateResponse({ stop_reason: 'end_turn', content: [] }), /empty/);
+  assert.throws(() => parseEstimateResponse({ stop_reason: 'end_turn', content: [{ type: 'text', text: 'Hi!' }] }), /didn’t return an estimate/);
 });
 
 test('odd values are cleaned up', () => {
   const e = normalizeEstimate({ name: '  ', calories: -5, protein_g: 'abc', carbs_g: 10.6, fat_g: null, confidence: 'unsure', is_food: false });
-  assert.deepEqual(e, { name: 'Meal', calories: 0, proteinG: 0, carbsG: 11, fatG: 0, confidence: 'medium', assumptions: [], isFood: false });
+  assert.deepEqual(e, { name: 'Meal', calories: 0, proteinG: 0, carbsG: 11, fatG: 0, confidence: 'medium', assumptions: [], basis: '', isFood: false });
+});
+
+test('search results without sources give an empty list', () => {
+  assert.deepEqual(searchSources([{ type: 'web_search_tool_result', content: { type: 'web_search_tool_result_error', error_code: 'unavailable' } }]), []);
 });
 
 // ---- Errors ---------------------------------------------------------------------------
@@ -108,6 +143,11 @@ test('errors are explained in plain words', () => {
   assert.match(friendlyError(529, { error: { type: 'overloaded_error' } }), /busy/);
   assert.match(friendlyError(400, { error: { message: 'Your credit balance is too low' } }), /out of credit/);
   assert.match(friendlyError(0, null), /No connection/);
+});
+
+test('a rejected web search is detected so it can be retried without it', () => {
+  assert.equal(isWebSearchRejection(400, { error: { message: 'web search is not enabled for this organization' } }), true);
+  assert.equal(isWebSearchRejection(400, { error: { message: 'messages: bad' } }), false);
 });
 
 test('a rejected fallback option is detected so it can be retried without it', () => {

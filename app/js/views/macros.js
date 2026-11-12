@@ -1,18 +1,20 @@
 // macros.js
-// The Macros tab: describe a meal in plain words, get an editable estimate from Claude,
-// reply to adjust it, then log it with one tap. Saved meals can be re-logged in one tap
-// (hold one to favorite or remove it). Today's meals and totals are shown above the chat.
+// The Macros tab, top to bottom: today's totals, today's meals (grouped by breakfast,
+// lunch, dinner, snacks), "Log again" chips for saved meals, then the chat: describe a meal
+// (or attach a photo of it or its nutrition label), get an editable estimate from Claude,
+// reply to adjust it, and log it with one tap.
 
-import { allSavedMeals, deleteMeal, deleteSavedMeal, getApiKey, getTargets, logMeal, mealsOnDay,
+import { allSavedMeals, deleteMeal, deleteSavedMeal, getApiKey, getTargets, getWebLookup, logMeal, mealsOnDay,
          saveSavedMeal } from '../data.js';
 import { todayKey } from '../logic/daykey.js';
-import { EstimateError, editedNote } from '../logic/mealEstimate.js';
+import { EstimateError, editedNote, userTurnContent } from '../logic/mealEstimate.js';
 import { dayTotals, macroLine, sortSavedMeals } from '../logic/meals.js';
 import { parseNumber } from '../logic/numbers.js';
 import { escapeHTML } from '../logic/text.js';
 import { estimateMeal } from '../services/anthropic.js';
 import { haptic } from '../ui/haptics.js';
 import { icons } from '../ui/icons.js';
+import { preparePhoto } from '../ui/photo.js';
 import { openSheet } from '../ui/sheet.js';
 import { showToast } from '../ui/toast.js';
 import { handleMealCardTap, mealsCardHTML } from './mealCards.js';
@@ -20,8 +22,8 @@ import { openApiKeySheet } from './settings.js';
 
 const EXAMPLES = [
   '2 eggs, a slice of sourdough with butter, and a latte with oat milk',
-  'Chicken burrito bowl with rice, beans, salsa and guacamole',
-  'Greek yogurt with blueberries and a drizzle of honey',
+  'Chipotle chicken burrito bowl with white rice, black beans, salsa and guacamole',
+  'Grande oat milk latte from Starbucks and a KIND dark chocolate nut bar',
 ];
 
 // The chat lives in memory while the app is open (logged meals are saved permanently).
@@ -29,6 +31,8 @@ const chat = {
   items: [],        // what's on screen: { type: 'user'|'estimate'|'note'|'divider', ... }
   apiMessages: [],  // the current meal's conversation with Claude (only ever appended to)
   draft: '',        // text in the message box
+  photo: null,      // a photo waiting to be sent: { mediaType, data, previewUrl }
+  pendingToolUseId: null, // Claude's last estimate call, answered at the start of the next message
   pending: false,   // waiting for Claude
   scrollToEnd: false,
 };
@@ -55,6 +59,8 @@ export async function renderMacros(root, { isCurrent, refresh }) {
 
     ${todayStripHTML(totals, targets)}
 
+    ${mealsCardHTML(meals, { title: 'Today’s meals', emptyMessage: 'Nothing logged yet today.' })}
+
     ${quick.length ? `
       <section class="quick-log" aria-label="Log a saved meal again">
         <div class="section-title-row">
@@ -70,18 +76,28 @@ export async function renderMacros(root, { isCurrent, refresh }) {
         </div>
       </section>` : ''}
 
-    ${mealsCardHTML(meals, { title: 'Today’s meals', emptyMessage: 'Nothing logged yet today.' })}
-
     <section class="chat" aria-label="Meal estimates" aria-live="polite">
+      <h3 class="section-title">Estimate a meal</h3>
       ${chat.items.length ? chat.items.map(itemHTML).join('') : introHTML()}
       ${chat.pending ? '<div class="bubble assistant typing"><span></span><span></span><span></span></div>' : ''}
     </section>
 
     ${canEstimate ? `
       <form class="composer" data-composer>
-        <textarea name="message" rows="1" placeholder="Describe a meal…" aria-label="Describe a meal"
-                  enterkeyhint="send">${escapeHTML(chat.draft)}</textarea>
-        <button type="submit" aria-label="Send" ${chat.pending ? 'disabled' : ''}>${icons.send}</button>
+        ${chat.photo ? `
+          <div class="photo-preview">
+            <img src="${chat.photo.previewUrl}" alt="Photo to send">
+            <button type="button" data-action="remove-photo" aria-label="Remove photo">${icons.close}</button>
+          </div>` : ''}
+        <div class="composer-row">
+          <label class="photo-button" aria-label="Add a photo of the meal or its nutrition label">
+            ${icons.camera}
+            <input type="file" accept="image/*" data-photo hidden>
+          </label>
+          <textarea name="message" rows="1" placeholder="${chat.photo ? 'Add a note (optional)…' : 'Describe a meal…'}"
+                    aria-label="Describe a meal" enterkeyhint="send">${escapeHTML(chat.draft)}</textarea>
+          <button type="submit" class="send-button" aria-label="Send" ${chat.pending ? 'disabled' : ''}>${icons.send}</button>
+        </div>
       </form>` : `
       <section class="card key-needed">
         <p>Add your Anthropic API key to get meal estimates. It’s stored only on this phone.</p>
@@ -97,7 +113,7 @@ export async function renderMacros(root, { isCurrent, refresh }) {
 
   root.onclick = (event) => onTap(event, root);
   root.oninput = onInput;
-  root.onchange = null;
+  root.onchange = onChange;
   root.onsubmit = (event) => { event.preventDefault(); send(); };
   root.onkeydown = (event) => {
     // On a computer keyboard, Enter sends and Shift+Enter adds a new line.
@@ -114,7 +130,8 @@ function todayStripHTML(totals, targets) {
   const cell = (label, value, target, unit) => `
     <div class="today-cell">
       <span class="today-label">${label}</span>
-      <span class="today-value"><strong>${value.toLocaleString()}</strong>${target ? ` / ${target.toLocaleString()}` : ''}${unit}</span>
+      <span class="today-value"><strong>${value.toLocaleString()}${unit}</strong></span>
+      ${target ? `<span class="today-target">of ${target.toLocaleString()}${unit}</span>` : ''}
     </div>`;
   return `
     <section class="card today-strip" aria-label="Today so far">
@@ -128,8 +145,9 @@ function todayStripHTML(totals, targets) {
 function introHTML() {
   return `
     <div class="bubble assistant intro">
-      <p>Tell me what you ate, as you’d say it to a friend. I’ll estimate the calories and macros,
-        and you can correct anything before logging.</p>
+      <p>Tell me what you ate, as you’d say it to a friend, or tap the camera to send a photo of your
+        plate or a nutrition label. Name the restaurant or brand and I’ll look up its official numbers.
+        You can correct anything before logging.</p>
       <div class="examples">
         ${EXAMPLES.map((text) => `<button class="chip" data-example="${escapeHTML(text)}">${escapeHTML(text)}</button>`).join('')}
       </div>
@@ -139,7 +157,7 @@ function introHTML() {
 function itemHTML(item, index) {
   switch (item.type) {
     case 'user':
-      return `<div class="bubble user">${escapeHTML(item.text)}</div>`;
+      return `<div class="bubble user">${item.photoUrl ? `<img class="bubble-photo" src="${item.photoUrl}" alt="Photo sent">` : ''}${item.text ? escapeHTML(item.text) : ''}</div>`;
     case 'note':
       return `<div class="bubble assistant ${item.error ? 'error' : ''}">${escapeHTML(item.text)}</div>`;
     case 'divider':
@@ -178,6 +196,12 @@ function estimateCardHTML(item, index) {
           <summary>Assumed portions (${e.assumptions.length})</summary>
           <ul class="assumptions">${e.assumptions.map((a) => `<li>${escapeHTML(a)}</li>`).join('')}</ul>
         </details>` : ''}
+      ${e.basis ? `<p class="estimate-basis">Based on: ${escapeHTML(e.basis)}</p>` : ''}
+      ${item.sources?.length ? `
+        <div class="estimate-sources">
+          <span>Sources</span>
+          ${item.sources.map((src) => `<a href="${escapeHTML(src.url)}" target="_blank" rel="noopener noreferrer">${escapeHTML(src.title)}</a>`).join('')}
+        </div>` : ''}
       ${item.demo ? '<p class="demo-note">Demo estimate (prototype only)</p>' : ''}
       ${logged
         ? `<p class="logged-note">${icons.check} Logged to today</p>`
@@ -211,10 +235,15 @@ async function onTap(event, root) {
     case 'new-meal':
       chat.items = [];
       chat.apiMessages = [];
+      chat.pendingToolUseId = null;
       rerender();
       break;
     case 'add-key':
       openApiKeySheet(null);
+      break;
+    case 'remove-photo':
+      chat.photo = null;
+      rerender();
       break;
   }
 }
@@ -238,35 +267,53 @@ function onInput(event) {
   item.edited = true;
 }
 
+async function onChange(event) {
+  // A photo was chosen: shrink it and show it above the message box until sent.
+  if (!event.target.matches('[data-photo]')) return;
+  const file = event.target.files?.[0];
+  if (!file) return;
+  try {
+    chat.photo = await preparePhoto(file);
+  } catch (error) {
+    showToast(error.message);
+  }
+  rerender();
+}
+
 async function send() {
   const text = chat.draft.trim();
-  if (!text || chat.pending) return;
+  const photo = chat.photo;
+  if ((!text && !photo) || chat.pending) return;
 
   // If you changed the numbers on the card you're replying to, tell Claude.
   const last = chat.items.findLast((item) => item.type === 'estimate');
   const replyingToEdited = last && last.edited && !last.loggedMealId && chat.apiMessages.length > 0;
-  const content = replyingToEdited ? `${editedNote(last.estimate)}\n\n${text}` : text;
+  const messageText = replyingToEdited ? `${editedNote(last.estimate)}\n\n${text}` : text;
+  const pendingToolUseId = chat.pendingToolUseId;
 
-  chat.items.push({ type: 'user', text });
-  chat.apiMessages.push({ role: 'user', content });
+  chat.items.push({ type: 'user', text, photoUrl: photo?.previewUrl ?? null });
+  chat.apiMessages.push({ role: 'user', content: userTurnContent(messageText, { pendingToolUseId, image: photo }) });
   chat.draft = '';
+  chat.photo = null;
   chat.pending = true;
   chat.scrollToEnd = true;
   rerender();
 
   try {
-    const apiKey = await getApiKey();
-    const { estimate, assistantContent } = await estimateMeal(apiKey, chat.apiMessages);
-    // The full reply (including any thinking blocks) goes back unchanged next time.
+    const [apiKey, webLookup] = await Promise.all([getApiKey(), getWebLookup()]);
+    const { estimate, assistantContent, toolUseId, sources } = await estimateMeal(apiKey, chat.apiMessages, { webLookup });
+    // The full reply (thinking, searches, the tool call) goes back unchanged next time.
     chat.apiMessages.push({ role: 'assistant', content: assistantContent });
+    chat.pendingToolUseId = toolUseId;
     if (estimate.isFood) {
-      chat.items.push({ type: 'estimate', estimate, sourceText: text, edited: false,
+      chat.items.push({ type: 'estimate', estimate, sources: sources ?? [], sourceText: text, edited: false,
                         demo: typeof globalThis.momentumDemoEstimator === 'function' });
     } else {
       chat.items.push({ type: 'note', text: estimate.assumptions.join(' ') || 'Tell me what you ate or drank.' });
     }
   } catch (error) {
     chat.apiMessages.pop(); // this message never got an answer; leave the thread as it was
+    chat.pendingToolUseId = pendingToolUseId;
     chat.items.push({
       type: 'note',
       error: true,
@@ -287,6 +334,7 @@ async function logEstimate(index) {
   item.loggedMealId = meal.id;
   // The next message starts a new meal instead of adjusting this one.
   chat.apiMessages = [];
+  chat.pendingToolUseId = null;
   const divider = { type: 'divider' };
   chat.items.push(divider);
   showToast(`Logged ${meal.name}`, {

@@ -1,9 +1,11 @@
 // mealCards.js
-// The list of meals logged on a day (with totals), and the sheet for editing or deleting one.
+// The list of meals logged on a day, grouped into Breakfast / Lunch / Dinner / Snacks with
+// subtotals, and the sheet for editing (name, time, numbers) or deleting one.
 // Used on the Macros tab and in the calendar's day sheet.
 
-import { deleteMeal, getMeal, saveMeal } from '../data.js';
-import { dayTotals, macroLine } from '../logic/meals.js';
+import { deleteMeal, getMeal, moveMeal, saveMeal } from '../data.js';
+import { fromLocalInputValue, toLocalInputValue } from '../logic/daykey.js';
+import { dayTotals, groupMealsBySection, macroLine } from '../logic/meals.js';
 import { parseNumber } from '../logic/numbers.js';
 import { escapeHTML } from '../logic/text.js';
 import { formatTime } from '../ui/format.js';
@@ -13,19 +15,26 @@ import { openSheet } from '../ui/sheet.js';
 export function mealsCardHTML(meals, { title = 'Meals', emptyMessage = 'No meals logged.' } = {}) {
   const totals = dayTotals(meals);
   return `
-    <section class="card">
+    <section class="card meals-card">
       <div class="card-header">
         <h3>${escapeHTML(title)}</h3>
         ${meals.length ? `<span class="badge muted">${totals.calories.toLocaleString()} kcal</span>` : ''}
       </div>
-      ${meals.length ? meals.map((meal) => `
-        <button class="workout-row" data-edit-meal="${meal.id}">
-          <span class="row-text">
-            <span class="row-title">${escapeHTML(meal.name)}</span>
-            <span class="row-subtitle">${macroLine(meal)}</span>
-          </span>
-          <span class="row-trailing">${formatTime(new Date(meal.date))}</span>
-        </button>`).join('') : `<p class="empty">${escapeHTML(emptyMessage)}</p>`}
+      ${meals.length ? groupMealsBySection(meals).map((group) => `
+        <div class="meal-section">
+          <div class="meal-section-head">
+            <span>${group.section}</span>
+            <span>${group.totals.calories.toLocaleString()} kcal</span>
+          </div>
+          ${group.meals.map((meal) => `
+            <button class="meal-row" data-edit-meal="${meal.id}">
+              <span class="row-text">
+                <span class="row-title">${escapeHTML(meal.name)}</span>
+                <span class="row-subtitle">${macroLine(meal)}</span>
+              </span>
+              <span class="row-trailing">${formatTime(new Date(meal.date))}</span>
+            </button>`).join('')}
+        </div>`).join('') : `<p class="empty">${escapeHTML(emptyMessage)}</p>`}
     </section>`;
 }
 
@@ -58,6 +67,10 @@ export async function openEditMeal(mealId) {
             <span>Name</span>
             <input class="text-input inline" name="name" value="${escapeHTML(meal.name)}" autocomplete="off">
           </label>
+          <label class="form-row">
+            <span>When</span>
+            <input class="date-input" type="datetime-local" name="when" value="${toLocalInputValue(new Date(meal.date))}">
+          </label>
           ${FIELDS.map(([field, label, unit]) => `
             <label class="form-row">
               <span>${label}</span>
@@ -86,6 +99,10 @@ export async function openEditMeal(mealId) {
         const { name, value } = event.target;
         if (name === 'name') {
           if (value.trim()) meal.name = value.trim();
+        } else if (name === 'when') {
+          const date = fromLocalInputValue(value);
+          if (!date) return;
+          moveMeal(meal, date); // also moves it to the right day and section
         } else if (FIELDS.some(([field]) => field === name)) {
           meal[name] = Math.max(0, Math.round(parseNumber(value) ?? 0));
         } else {

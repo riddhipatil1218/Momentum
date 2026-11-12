@@ -522,6 +522,7 @@ body.onboarding .view { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 
 .today-label { font-size: 11px; font-weight: 650; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.05em; }
 .today-value { font-size: 12px; color: var(--text-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .today-value strong { font-size: 16px; color: var(--text); }
+.today-target { font-size: 11px; color: var(--text-2); font-variant-numeric: tabular-nums; }
 
 .meal-chip { padding-left: 14px; }
 .meal-chip .star { color: var(--accent-strong); font-size: 13px; }
@@ -707,6 +708,77 @@ body[data-tab="macros"] .view { padding-bottom: calc(var(--tabbar-height) + env(
 .file-button { display: block; text-align: center; cursor: pointer; }
 .restore-summary { display: flex; flex-direction: column; gap: 4px; font-size: 15px; }
 .restore-summary span { color: var(--text-2); font-size: 14px; }
+
+/* ---- Meals card sections, photos, sources -------------------------------------------- */
+
+.meal-section + .meal-section { margin-top: 10px; }
+.meal-section-head {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 6px 10px; margin: 4px 0 2px; border-radius: 9px;
+  background: var(--accent-soft); color: var(--accent-strong);
+  font-size: 12px; font-weight: 750; text-transform: uppercase; letter-spacing: 0.06em;
+}
+.meal-section-head span:last-child { font-variant-numeric: tabular-nums; text-transform: none; letter-spacing: 0; font-weight: 650; }
+.meal-row { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 8px 10px; }
+.meal-row + .meal-row { border-top: 1px solid var(--separator); }
+.meal-row:active { opacity: 0.6; }
+
+.chat > .section-title { margin-bottom: 2px; }
+.composer { flex-direction: column; align-items: stretch; gap: 6px; }
+.composer-row { display: flex; align-items: flex-end; gap: 8px; }
+.photo-button {
+  width: 42px; height: 42px; border-radius: 50%; flex-shrink: 0; cursor: pointer;
+  display: grid; place-items: center; color: var(--accent-strong);
+  background: var(--card); border: 1px solid var(--border); box-shadow: var(--shadow);
+}
+.photo-preview { position: relative; align-self: flex-start; }
+.photo-preview img { display: block; height: 64px; max-width: 120px; object-fit: cover; border-radius: 12px; box-shadow: var(--shadow); }
+.photo-preview button {
+  position: absolute; top: -8px; right: -8px; width: 24px; height: 24px; border-radius: 50%;
+  background: var(--text); color: var(--bg); display: grid; place-items: center;
+}
+.photo-preview button svg { width: 14px; height: 14px; }
+.bubble-photo { display: block; max-width: 180px; max-height: 180px; border-radius: 12px; margin-bottom: 6px; object-fit: cover; }
+.estimate-basis { font-size: 12px; color: var(--text-2); margin-top: -4px; }
+.estimate-sources { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px; margin-top: -4px; }
+.estimate-sources span { color: var(--text-2); font-weight: 600; }
+.estimate-sources a {
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  color: var(--accent-strong); background: var(--accent-soft); padding: 3px 8px; border-radius: 999px; text-decoration: none;
+}
+
+/* ---- Calorie balance ------------------------------------------------------------------ */
+
+.streak-chip.muted { color: var(--text-2); }
+.deficit-chip {
+  display: inline-flex; align-items: center; gap: 6px; margin-top: 8px;
+  padding: 5px 10px; border-radius: 999px; font-size: 13px; font-weight: 650;
+  background: var(--workout-soft); color: var(--workout);
+}
+.balance-today { display: flex; align-items: stretch; gap: 10px; flex-wrap: wrap; }
+.balance-main { flex: 1 1 160px; display: flex; flex-direction: column; justify-content: center; padding: 12px 14px; border-radius: 14px; }
+.balance-main strong { font-family: var(--font-display); font-size: 34px; font-weight: 750; line-height: 1.05; font-variant-numeric: tabular-nums; }
+.balance-main span { font-size: 13px; font-weight: 600; color: var(--text-2); }
+.balance-main.deficit { background: var(--workout-soft); } .balance-main.deficit strong { color: var(--workout); }
+.balance-main.surplus { background: color-mix(in srgb, var(--danger) 12%, transparent); } .balance-main.surplus strong { color: var(--danger); }
+.balance-parts { flex: 1 1 120px; display: flex; flex-direction: column; gap: 6px; }
+.balance-parts div { flex: 1; display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-radius: 12px; background: var(--fill); font-size: 13px; color: var(--text-2); }
+.balance-parts strong { font-size: 17px; color: var(--text); font-variant-numeric: tabular-nums; }
+.balance-card .footnote { padding: 0; margin-top: 8px; }
+.balance-bars { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; align-items: end; }
+.balance-col { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; }
+.balance-value { font-size: 10px; font-weight: 700; color: var(--text-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.balance-track { width: 100%; max-width: 30px; height: 70px; border-radius: 8px; background: var(--fill); display: flex; align-items: flex-end; overflow: hidden; }
+.balance-track span { display: block; width: 100%; border-radius: 8px; }
+.balance-col.deficit .balance-track span { background: linear-gradient(to top, var(--workout), var(--mauve)); }
+.balance-col.deficit .balance-value { color: var(--workout); }
+.balance-col.surplus .balance-track span { background: var(--danger); opacity: 0.75; }
+.balance-col.surplus .balance-value { color: var(--danger); }
+.balance-day { font-size: 11px; font-weight: 700; color: var(--text-2); }
+.balance-col.is-today .balance-day { color: var(--accent-strong); }
+.balance-summary { font-size: 14px; margin-top: 10px; }
+.balance-summary strong { color: var(--workout); }
+.balance-summary strong.surplus { color: var(--danger); }
 
 /* ---- Misc ------------------------------------------------------------------------- */
 

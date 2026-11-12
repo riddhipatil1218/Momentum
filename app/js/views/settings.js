@@ -3,7 +3,7 @@
 // workout lists, and the AI key for meal estimates. Editing opens a sheet; the tab itself
 // only shows the current values, so it can redraw freely.
 
-import { getApiKey, getLastBackupAt, getProfile, getTargets, getWeeklyGoal, removeApiKey, saveApiKey, saveProfile,
+import { getApiKey, getLastBackupAt, getProfile, getTargets, getWebLookup, getWeeklyGoal, removeApiKey, saveWebLookup, saveApiKey, saveProfile,
          saveTargets, saveWeeklyGoal } from '../data.js';
 import { ACTIVITY_LEVELS, formatHeight, profileProblems, suggestTargets } from '../logic/targets.js';
 import { escapeHTML } from '../logic/text.js';
@@ -16,8 +16,8 @@ import { fillTargets, readStatsForm, readTargets, statsFormHTML, targetsFieldsHT
          updateMacroSum } from './statsForm.js';
 
 export async function renderSettings(root, { isCurrent }) {
-  const [profile, targets, weeklyGoal, apiKey, lastBackupAt] = await Promise.all([
-    getProfile(), getTargets(), getWeeklyGoal(), getApiKey(), getLastBackupAt(),
+  const [profile, targets, weeklyGoal, apiKey, lastBackupAt, webLookup] = await Promise.all([
+    getProfile(), getTargets(), getWeeklyGoal(), getApiKey(), getLastBackupAt(), getWebLookup(),
   ]);
   const lastBackup = lastBackupAt
     ? new Date(lastBackupAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
@@ -81,7 +81,16 @@ export async function renderSettings(root, { isCurrent }) {
         </span>
         ${icons.chevronRight}
       </button>
+      <label class="form-row toggle-row">
+        <span class="row-text">
+          <span class="row-title">Look up restaurants &amp; brands</span>
+          <span class="row-subtitle">Claude checks official nutrition online when you name one</span>
+        </span>
+        <input type="checkbox" class="switch" data-web-lookup ${webLookup ? 'checked' : ''}>
+      </label>
     </div>
+    <p class="footnote">Estimates cost about 2–3¢ each, plus about 1¢ per online lookup (usually 1–3),
+      billed by Anthropic. Generic foods are estimated without searching.</p>
 
     <h3 class="section-title">Backup</h3>
     <div class="form-group">
@@ -118,7 +127,9 @@ export async function renderSettings(root, { isCurrent }) {
       case 'restore': return openRestoreSheet();
     }
   };
-  root.onchange = null;
+  root.onchange = (event) => {
+    if (event.target.matches('[data-web-lookup]')) saveWebLookup(event.target.checked);
+  };
 }
 
 // ---- Sheets -------------------------------------------------------------------------
@@ -205,7 +216,7 @@ export function openApiKeySheet(savedKey) {
     title: 'Anthropic API key',
     render(body) {
       body.innerHTML = `
-        <p class="sheet-hint">Used by the Macros tab to estimate meals (about 1–2¢ each, billed by Anthropic).
+        <p class="sheet-hint">Used by the Macros tab to estimate meals (about 2–3¢ each, more if it looks things up online; billed by Anthropic).
           The key is stored only on this phone, is never shown in full, and is sent only to Anthropic.
           Create one at console.anthropic.com → API Keys.</p>
         ${savedKey ? `
