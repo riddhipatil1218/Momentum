@@ -108,7 +108,13 @@ svg { flex-shrink: 0; }
 .page-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; padding: 6px 2px 2px; }
 .page-header h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.01em; }
 .header-date { font-size: 14px; font-weight: 500; color: var(--text-2); margin-top: 1px; }
-.encouragement { font-size: 15px; color: var(--accent-strong); font-weight: 600; margin-top: 8px; }
+.quote {
+  display: flex; flex-direction: column; gap: 4px; margin-top: 12px; text-align: left;
+  padding: 2px 0 2px 12px; border-left: 3px solid var(--mauve);
+}
+.quote-text { font-family: var(--font-display); font-style: italic; font-size: 16px; line-height: 1.4; font-weight: 550; color: var(--accent-strong); text-wrap: pretty; }
+.quote-credit { font-size: 12px; font-weight: 600; color: var(--text-2); }
+.quote:active .quote-text { opacity: 0.6; }
 .section-title { font-size: 13px; font-weight: 650; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.06em; padding: 0 2px; }
 
 /* ---- Cards --------------------------------------------------------------------- */

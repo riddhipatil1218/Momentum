@@ -1,16 +1,21 @@
 // today.js
-// The Today tab: greeting with an encouraging line, this week's progress,
+// The Today tab: greeting with a quote of the day, this week's progress,
 // one-tap quick-log chips, today's workouts, and the supplement checklist.
 
 import { activeActivities, getWeeklyGoal, workoutsBetween } from '../data.js';
 import { addDays, todayKey } from '../logic/daykey.js';
 import { preferredFirstWeekday, weekdayLetters } from '../logic/monthgrid.js';
-import { encouragement, weekDayKeys, workoutStreak } from '../logic/progress.js';
-import { escapeHTML, monoEmoji } from '../logic/text.js';
+import { weekDayKeys, workoutStreak } from '../logic/progress.js';
+import { quoteCredit, quoteForDay } from '../logic/quotes.js';
+import { escapeHTML } from '../logic/text.js';
 import { formatLongDate, greeting } from '../ui/format.js';
 import { loadBalances } from './balanceData.js';
 import { handleDayCardTap, loadDay, supplementsCardHTML, workoutsCardHTML } from './dayCards.js';
 import { openLogWorkout } from './logWorkout.js';
+
+// Which quote is showing (tap to move to the next one).
+let quoteDay = null;
+let quoteOffset = 0;
 
 export async function renderToday(root, { isCurrent }) {
   // Worked out on every draw, so it rolls over after midnight.
@@ -36,7 +41,9 @@ export async function renderToday(root, { isCurrent }) {
   }
   const weekCount = recent.filter((w) => week.includes(w.dayKey)).length;
   const streak = workoutStreak(workoutDays, today);
-  const message = encouragement({ workedOutToday: workouts.length > 0, weekCount, goal, streak });
+  // A new quote each day; tapping it shows the next one (resets the next day).
+  if (quoteDay !== today) { quoteDay = today; quoteOffset = 0; }
+  const quote = quoteForDay(today, quoteOffset);
   const letters = weekdayLetters(firstWeekday);
 
   root.innerHTML = `
@@ -44,7 +51,10 @@ export async function renderToday(root, { isCurrent }) {
       <div>
         <h1>${greeting()}</h1>
         <p class="header-date">${formatLongDate(new Date())}</p>
-        <p class="encouragement">${monoEmoji(escapeHTML(message))}</p>
+        <button class="quote" data-action="next-quote" aria-label="Quote of the day. Tap for another.">
+          <span class="quote-text">“${escapeHTML(quote.text)}”</span>
+          <span class="quote-credit">${escapeHTML(quoteCredit(quote))}</span>
+        </button>
         ${streak || balance?.streak ? `
           <div class="streak-row" aria-label="Streaks">
             ${streak ? `<span class="streak-pill">${streak}-day workout streak</span>` : ''}
@@ -91,6 +101,14 @@ export async function renderToday(root, { isCurrent }) {
     ${supplementsCardHTML(supplements, takenIds)}`;
 
   root.onclick = async (event) => {
+    const quoteButton = event.target.closest('[data-action="next-quote"]');
+    if (quoteButton) {
+      quoteOffset++;
+      const next = quoteForDay(today, quoteOffset);
+      quoteButton.querySelector('.quote-text').textContent = `“${next.text}”`;
+      quoteButton.querySelector('.quote-credit').textContent = quoteCredit(next);
+      return;
+    }
     const chip = event.target.closest('[data-quick-log]');
     if (chip) {
       openLogWorkout(today, activities.find((a) => a.id === chip.dataset.quickLog));

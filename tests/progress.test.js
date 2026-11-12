@@ -2,7 +2,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { encouragement, loggedCheer, weekDayKeys, workoutStreak } from '../app/js/logic/progress.js';
+import { loggedCheer, weekDayKeys, workoutStreak } from '../app/js/logic/progress.js';
 
 test('week containing a Wednesday, Sunday-first', () => {
   // Nov 11, 2026 is a Wednesday.
@@ -37,15 +37,6 @@ test('a gap breaks the streak', () => {
 
 test('streak across a month boundary', () => {
   assert.equal(workoutStreak(new Set([20261030, 20261031, 20261101]), 20261101), 3);
-});
-
-test('encouragement picks the most relevant message', () => {
-  assert.match(encouragement({ workedOutToday: true, weekCount: 4, goal: 4 }), /goal reached/i);
-  assert.match(encouragement({ workedOutToday: true, weekCount: 2, goal: 4 }), /showed up today/);
-  assert.match(encouragement({ workedOutToday: false, weekCount: 2, goal: 4, streak: 3 }), /Keep your streak going/);
-  assert.match(encouragement({ workedOutToday: false, weekCount: 3, goal: 4 }), /^1 more workout to/);
-  assert.match(encouragement({ workedOutToday: false, weekCount: 1, goal: 4 }), /^3 more workouts to/);
-  assert.match(encouragement({ workedOutToday: false, weekCount: 0, goal: 4 }), /still counts/);
 });
 
 test('cheer after logging', () => {

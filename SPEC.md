@@ -90,6 +90,7 @@ Newest at the bottom. Superseded decisions are kept (struck through) so the hist
 | D73 | Macros tab order: today's totals → **Today's meals** (grouped into Breakfast <11am, Lunch 11–3, Dinner 5–10pm, Snacks otherwise, each with a subtotal) → Log again → "Estimate a meal" chat. Meals can be moved to another time in their edit sheet (which also moves the section/day). | Owner asked for meals above Log again and more sections. |
 | D74 | Streaks are shown the same way everywhere: one line on Today under the encouraging message with matching labels ("2-day workout streak", "1-day deficit streak"; each shown from 1 day), and the same label style on the Dashboard. | Owner asked for standardized streak messages. |
 | D75 | **No emoji outside workouts.** Emoji appear only as workout-type icons (chips, workout rows, the log picker, workouts-by-type). Messages, streaks and empty states use plain text; plain symbols (✓ ↑ ↓ ★) stay. Supersedes D40's emoji in messages. | Owner's request. |
+| D76 | **Quote of the day** replaces the encouraging message on Today: 26 short lines from well-known books on discipline, courage, ambition and self-respect (e.g. Atomic Habits, Jane Eyre, Frankenstein, The 48 Laws of Power, The Bell Jar, Meditations), each the book's exact wording or named translation, credited with author and title. About half have a darker edge; the list alternates moods. One per calendar day; tap for the next. Popular misattributions are avoided (e.g. the "excellence is a habit" line is credited to Will Durant, not Aristotle). List in `logic/quotes.js`. | Owner asked for motivating quotes with a "smart, intellectual, dark-feminine" feel, not all dark. |
 
 ## 2. File structure
 
@@ -121,7 +122,8 @@ Momentum/
 │       │   ├── goals.js         under / on target / over, 7-day grid
 │       │   ├── backup.js        backup file build/check, CSV
 │       │   ├── energy.js        calorie burn (stats + workouts), balance, deficit streak
-│       │   ├── progress.js      weekly goal, streaks, encouraging messages
+│       │   ├── quotes.js        quote of the day
+│       │   ├── progress.js      weekly goal, streaks, logging cheer
 │       │   ├── text.js          safe HTML text, plurals
 │       │   └── workouts.js      activity kinds, defaults, summary line
 │       ├── services/        anthropic.js: the only network call (meal estimates)
@@ -140,6 +142,7 @@ Momentum/
 │   ├── monthgrid.test.js
 │   ├── ordering.test.js
 │   ├── progress.test.js
+│   ├── quotes.test.js
 │   ├── targets.test.js
 │   └── numbers.test.js
 └── ios-native/          ← earlier SwiftUI version (unused, see D28)
