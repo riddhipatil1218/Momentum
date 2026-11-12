@@ -4,7 +4,7 @@ A personal app (one user, one iPhone) for logging workouts, supplements, meals/m
 and weight. It's a **web app**: you add it to the iPhone Home Screen and it runs full
 screen like a regular app. All data is stored on the phone.
 
-Status: **Milestones 1–4 + Backup live on the phone. Calorie balance, smarter meal estimates and the Macros layout in the prototype, awaiting review.** Sections marked
+Status: **Milestones 1–4, Backup, calorie balance and smarter estimates live on the phone. Past-day balance breakdown and Weight (Milestone 5) in the prototype, awaiting review.** Sections marked
 *(planned)* are proposals for later milestones and will be confirmed before they're built.
 
 ---
@@ -91,6 +91,11 @@ Newest at the bottom. Superseded decisions are kept (struck through) so the hist
 | D74 | Streaks are shown the same way everywhere: one line on Today under the encouraging message with matching labels ("2-day workout streak", "1-day deficit streak"; each shown from 1 day), and the same label style on the Dashboard. | Owner asked for standardized streak messages. |
 | D75 | **No emoji outside workouts.** Emoji appear only as workout-type icons (chips, workout rows, the log picker, workouts-by-type). Messages, streaks and empty states use plain text; plain symbols (✓ ↑ ↓ ★) stay. Supersedes D40's emoji in messages. | Owner's request. |
 | D76 | **Quote of the day** replaces the encouraging message on Today: 26 short lines from well-known books on discipline, courage, ambition and self-respect (e.g. Atomic Habits, Jane Eyre, Frankenstein, The 48 Laws of Power, The Bell Jar, Meditations), each the book's exact wording or named translation, credited with author and title. About half have a darker edge; the list alternates moods. One per calendar day; tap for the next. Popular misattributions are avoided (e.g. the "excellence is a habit" line is credited to Will Durant, not Aristotle). List in `logic/quotes.js`. | Owner asked for motivating quotes with a "smart, intellectual, dark-feminine" feel, not all dark. |
+| D77 | **Calorie balance for past days**: tap any day in the Dashboard chart (or today's numbers, or the balance line in the calendar's day sheet) to open that day's breakdown — result, a few plain reasons ("why"), and every number behind it (everyday burn at that day's weight, each workout with minutes/kcal, each meal). Arrows step back up to 90 days. | Owner wants to see past days and why each was a deficit or surplus. |
+| D78 | "Why" reasons (`explainBalance`): eaten vs burned; what workouts added (or that there were none); the biggest meal if it was ≥35% of the day; for a small no-workout surplus, how much it would have taken to tip into a deficit; and eaten vs the calorie target. | Short, factual, specific to the day. |
+| D79 | **Database version 3** (owner approved the Weight milestone): adds a `weights` store (id, date, dayKey, pounds), indexed by dayKey. Nothing earlier changes; upgrade tested from a version-2 database. Weigh-ins are in backups and a weights CSV. | Weigh-ins need their own table. |
+| D80 | **Weight kept minor** (owner logs about every 2 weeks): Dashboard card with latest weight, change since the first weigh-in, lb to goal, a small chart (goal line + dashed projection), pace and estimated goal date, and "Next weigh-in" (14 days after the last). Because weigh-ins are far apart, the trend is a straight-line fit through weigh-ins in the last ~4 weeks (30 days) instead of a 7-day average; it needs two weigh-ins ≥10 days apart, otherwise "Not enough data yet". Losing vs gaining is judged from the highest weight seen. Weigh-ins can be viewed and deleted (Keep/Delete). | Fits a biweekly habit; replaces the planned 7-day average. |
+| D81 | The newest weigh-in updates the weight in your stats; daily targets don't change by themselves. Calorie burn for each day uses the latest weigh-in on or before that day. | More accurate burn without surprising target changes. |
 
 ## 2. File structure
 
@@ -122,6 +127,7 @@ Momentum/
 │       │   ├── goals.js         under / on target / over, 7-day grid
 │       │   ├── backup.js        backup file build/check, CSV
 │       │   ├── energy.js        calorie burn (stats + workouts), balance, deficit streak
+│       │   ├── weight.js        weigh-in trend, goal projection, next weigh-in
 │       │   ├── quotes.js        quote of the day
 │       │   ├── progress.js      weekly goal, streaks, logging cheer
 │       │   ├── text.js          safe HTML text, plurals
@@ -132,7 +138,7 @@ Momentum/
 │       └── views/           screens: today, calendar, dayDetail, logWorkout,
 │                            editWorkout, workoutFields, dayCards, manage (list editors),
 │                            onboarding (welcome), settings, statsForm, macros, mealCards,
-│                            dashboard, balanceData, backupView, comingSoon
+│                            dashboard, balanceData, balanceDay, weightView, backupView, comingSoon
 ├── tools/prototype/     ← builds the claude.ai prototype (not part of the app)
 ├── tests/               ← npm test
 │   ├── daykey.test.js
@@ -143,6 +149,7 @@ Momentum/
 │   ├── ordering.test.js
 │   ├── progress.test.js
 │   ├── quotes.test.js
+│   ├── weight-breakdown.test.js
 │   ├── targets.test.js
 │   └── numbers.test.js
 └── ios-native/          ← earlier SwiftUI version (unused, see D28)
@@ -218,8 +225,8 @@ Unchecking deletes the row.
 - **meals**: id, date, dayKey, name, calories, proteinG, carbsG, fatG, confidence, assumptions[], sourceText, createdAt. Indexed by dayKey.
 - **savedMeals**: id, name, calories, proteinG, carbsG, fatG, assumptions[], favorite, useCount, lastUsed, createdAt.
 
-### Database version 3 *(planned for Milestone 5; I'll ask before adding)*
-- **weights**: id, date, dayKey, pounds. Indexed by dayKey.
+### Database version 3 (Weight, built — D79)
+- **weights**: id, date, dayKey, pounds, createdAt. Indexed by dayKey.
 
 ## 4. Milestones
 

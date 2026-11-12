@@ -793,6 +793,55 @@ body[data-tab="macros"] .view { padding-bottom: calc(var(--tabbar-height) + env(
 .balance-summary strong { color: var(--workout); }
 .balance-summary strong.surplus { color: var(--danger); }
 
+/* ---- Balance breakdown ("why") and weight -------------------------------------------- */
+
+button.balance-today { width: 100%; text-align: left; }
+button.balance-today:active { opacity: 0.8; }
+button.balance-col { background: none; border: 0; padding: 0; }
+button.balance-col:active .balance-track { opacity: 0.7; }
+.section-title-row.inline-title { margin: 16px 0 8px; align-items: center; }
+.section-title-row.inline-title .form-section-title { margin: 0; }
+.day-nav { display: flex; align-items: center; justify-content: space-between; }
+.day-nav strong { font-family: var(--font-display); font-size: 18px; }
+.balance-result { display: flex; flex-direction: column; align-items: center; padding: 18px; border-radius: var(--radius); }
+.balance-result strong { font-family: var(--font-display); font-size: 36px; font-weight: 750; font-variant-numeric: tabular-nums; }
+.balance-result span { font-size: 14px; font-weight: 650; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.06em; }
+.balance-result.deficit { background: var(--workout-soft); } .balance-result.deficit strong { color: var(--workout); }
+.balance-result.surplus { background: color-mix(in srgb, var(--danger) 12%, transparent); } .balance-result.surplus strong { color: var(--danger); }
+.reasons { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 8px; font-size: 15px; line-height: 1.4; }
+.reasons li::marker { color: var(--mauve); }
+.ledger-row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 8px 0; font-size: 14px; }
+.ledger-row + .ledger-row { border-top: 1px solid var(--separator); }
+.ledger-row strong { font-variant-numeric: tabular-nums; }
+.ledger-row em { font-style: normal; font-size: 12px; color: var(--text-2); margin-left: 4px; }
+.ledger-row.muted { color: var(--text-2); }
+.ledger-emoji { margin-right: 6px; }
+.balance-link { width: 100%; text-align: left; }
+.balance-link.deficit strong { color: var(--workout); }
+.balance-link.surplus strong { color: var(--danger); }
+
+.weight-card { display: flex; flex-direction: column; gap: 10px; }
+.weight-card .card-header { margin-bottom: 0; }
+.pill-button.small { padding: 4px 12px; font-size: 13px; }
+.weight-top { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.weight-latest strong { display: block; font-family: var(--font-display); font-size: 30px; font-weight: 750; line-height: 1; font-variant-numeric: tabular-nums; }
+.weight-latest span { font-size: 12px; color: var(--text-2); font-weight: 600; }
+.weight-facts { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; font-size: 13px; color: var(--text-2); }
+.weight-facts b { color: var(--text); }
+.weight-chart { width: 100%; height: auto; display: block; }
+.chart-line { fill: none; stroke: var(--workout); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+.chart-dot { fill: var(--card); stroke: var(--workout); stroke-width: 2; }
+.chart-goal { stroke: var(--mauve); stroke-width: 1.5; stroke-dasharray: 4 4; }
+.chart-projection { fill: none; stroke: var(--workout); stroke-width: 2; stroke-dasharray: 5 5; opacity: 0.7; }
+.chart-axis { stroke: var(--separator); stroke-width: 1; }
+.chart-label { font-size: 10px; fill: var(--text-2); font-family: var(--font-body); }
+.chart-label.goal { fill: var(--mauve); font-weight: 700; }
+.weight-pace { font-size: 14px; line-height: 1.4; }
+.weight-pace strong { color: var(--workout); }
+.weight-bottom { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 13px; color: var(--text-2); }
+.weight-bottom .due { color: var(--accent-strong); font-weight: 700; }
+.soft-button.compact { width: auto; padding: 8px 14px; }
+
 /* ---- Misc ------------------------------------------------------------------------- */
 
 .coming-soon { text-align: center; padding: 32px 20px; display: flex; flex-direction: column; gap: 8px; align-items: center; }

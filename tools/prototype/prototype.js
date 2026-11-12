@@ -3,7 +3,7 @@
 // so every screen has something to show. "Clear" removes everything you logged plus your
 // stats and settings, and starts again at the welcome screen.
 
-import { activeActivities, activeSupplements, checkAllSupplements, logMeal, logWorkout, saveWorkout } from './js/data.js';
+import { activeActivities, activeSupplements, checkAllSupplements, getProfile, logMeal, logWeight, logWorkout, saveWorkout } from './js/data.js';
 import { openDB } from './js/db.js';
 import { addDays, dateOnDayAtTime, todayKey } from './js/logic/daykey.js';
 
@@ -48,6 +48,13 @@ document.getElementById('proto-sample').addEventListener('click', async () => {
   // A few example meals (yesterday and today) so Macros and the day sheet have something to show.
   for (const [daysAgo, hour, meal] of SAMPLE_MEALS) {
     await logMeal(meal, dateOnDayAtTime(addDays(todayKey(), -daysAgo), new Date(2000, 0, 1, hour, 30)));
+  }
+  // Three weigh-ins two weeks apart, ending at the weight from your stats, so the Weight card has a trend.
+  const profile = await getProfile();
+  if (profile?.weightLb) {
+    for (const [daysAgo, extra] of [[28, 2], [14, 1], [0, 0]]) {
+      await logWeight(profile.weightLb + extra, dateOnDayAtTime(addDays(todayKey(), -daysAgo), new Date(2000, 0, 1, 7, 30)));
+    }
   }
   const supplements = await activeSupplements();
   for (const daysAgo of SUPPLEMENT_DAYS_AGO) {

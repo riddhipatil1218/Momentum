@@ -4,13 +4,15 @@
 // and a 7-day view of which goals you hit each day.
 // It redraws whenever a meal is logged, edited or deleted.
 
-import { getTargets, mealsBetween } from '../data.js';
+import { allWeights, getProfile, getTargets, mealsBetween } from '../data.js';
 import { addDays, startOfDay, todayKey } from '../logic/daykey.js';
 import { barPercent, daysOnTarget, goalStatus, METRICS, remainingText, statusLabel, TOLERANCE, weekGrid }
   from '../logic/goals.js';
 import { dayTotals } from '../logic/meals.js';
 import { poundsFromCalories } from '../logic/energy.js';
 import { loadBalances } from './balanceData.js';
+import { openBalanceDay } from './balanceDay.js';
+import { handleWeightTap, weightCardHTML } from './weightView.js';
 import { formatLongDate } from '../ui/format.js';
 
 const STATUS_MARK = { on: '✓', under: '↓', over: '↑' };
@@ -18,7 +20,9 @@ const STATUS_MARK = { on: '✓', under: '↓', over: '↑' };
 export async function renderDashboard(root, { isCurrent }) {
   const today = todayKey();
   const days = Array.from({ length: 7 }, (_, i) => addDays(today, i - 6)); // oldest first
-  const [targets, meals, balance] = await Promise.all([getTargets(), mealsBetween(days[0], today), loadBalances()]);
+  const [targets, meals, balance, weights, profile] = await Promise.all([
+    getTargets(), mealsBetween(days[0], today), loadBalances(), allWeights(), getProfile(),
+  ]);
   if (!isCurrent()) return;
 
   // Totals per day (only days that have meals).
@@ -42,6 +46,8 @@ export async function renderDashboard(root, { isCurrent }) {
     </header>
 
     ${balanceCardHTML(balance, days)}
+
+    ${weightCardHTML(weights, profile)}
 
     ${targets ? `
       <section class="card progress-card" aria-label="Today">
@@ -89,7 +95,11 @@ export async function renderDashboard(root, { isCurrent }) {
         <p>Add your stats in Settings to get calorie and macro targets. Your progress shows up here.</p>
       </section>`}`;
 
-  root.onclick = null;
+  root.onclick = (event) => {
+    const dayButton = event.target.closest('[data-balance-day]');
+    if (dayButton) return openBalanceDay(Number(dayButton.dataset.balanceDay));
+    handleWeightTap(event.target);
+  };
 }
 
 function progressRowHTML(label, unit, value, target) {
@@ -133,7 +143,7 @@ function balanceCardHTML(data, days) {
           ? `${streak}-day deficit streak` : 'No deficit streak yet'}</span>
       </div>
 
-      <div class="balance-today">
+      <button class="balance-today" data-balance-day="${today}" aria-label="Today’s balance details">
         <div class="balance-main ${left >= 0 ? 'deficit' : 'surplus'}">
           <strong>${Math.abs(left).toLocaleString()}</strong>
           <span>${left >= 0 ? 'kcal left today and still in a deficit' : 'kcal over today’s burn'}</span>
@@ -142,24 +152,27 @@ function balanceCardHTML(data, days) {
           <div><span>Burned (est.)</span><strong>${todayBurn.total.toLocaleString()}</strong></div>
           <div><span>Eaten</span><strong>${todayEaten.toLocaleString()}</strong></div>
         </div>
-      </div>
+      </button>
       <p class="footnote">Burn = ${todayBurn.everyday.toLocaleString()} kcal from your stats (resting + daily life)
         + ${todayBurn.workouts.toLocaleString()} kcal from today’s workouts${todayBurn.assumedDurations
           ? ` (${todayBurn.assumedDurations} without a duration counted as 45 min)` : ''}.</p>
 
-      <h4 class="form-section-title inline-title">Last 7 days</h4>
-      <div class="balance-bars" role="list">
+      <div class="section-title-row inline-title">
+        <h4 class="form-section-title">Last 7 days</h4>
+        <span class="hold-hint">Tap a day to see why</span>
+      </div>
+      <div class="balance-bars">
         ${shown.map(({ day, balance }) => {
           const value = balance?.balance ?? 0;
           const height = balance ? Math.max(4, Math.round((Math.abs(value) / biggest) * 100)) : 0;
           return `
-            <div class="balance-col ${balance ? (balance.inDeficit ? 'deficit' : 'surplus') : 'empty'} ${day === today ? 'is-today' : ''}" role="listitem"
-                 aria-label="${startOfDay(day).toLocaleDateString(undefined, { weekday: 'long' })}: ${balance
+            <button class="balance-col ${balance ? (balance.inDeficit ? 'deficit' : 'surplus') : 'empty'} ${day === today ? 'is-today' : ''}"
+                 data-balance-day="${day}" aria-label=""${startOfDay(day).toLocaleDateString(undefined, { weekday: 'long' })}: ${balance
                    ? `${Math.abs(value)} kcal ${balance.inDeficit ? 'deficit' : 'surplus'}` : 'no meals logged'}">
               <span class="balance-value">${balance ? `${value > 0 ? '−' : '+'}${Math.abs(value).toLocaleString()}` : '—'}</span>
               <span class="balance-track"><span style="height:${height}%"></span></span>
               <span class="balance-day">${startOfDay(day).toLocaleDateString(undefined, { weekday: 'narrow' })}</span>
-            </div>`;
+            </button>`;
         }).join('')}
       </div>
       <p class="balance-summary">${pastWeek.length
@@ -168,6 +181,6 @@ function balanceCardHTML(data, days) {
           : `Past ${pastWeek.length} logged day${pastWeek.length === 1 ? '' : 's'}: <strong class="surplus">${(-weekBalance).toLocaleString()} kcal surplus</strong>`)
         : 'Log meals to see your daily balance.'}</p>
       <p class="footnote">−  = deficit (burned more than eaten), + = surplus. Days without meals are blank and end a streak.
-        Burn is an estimate.</p>
+        For earlier days, use the arrows in a day’s breakdown. Burn is an estimate.</p>
     </section>`;
 }

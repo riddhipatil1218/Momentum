@@ -22,13 +22,14 @@ export async function exportBackup() {
   }
 }
 
-/** Exports workouts, meals and supplement check-ins as three spreadsheet files. */
+/** Exports workouts, meals, supplement check-ins and weigh-ins as spreadsheet files. */
 export async function exportSpreadsheets() {
   const { storeData } = await readEverythingForBackup();
   const files = [
     ['momentum-workouts', sortByDay(storeData.workouts), CSV_TABLES.workouts],
     ['momentum-meals', sortByDay(storeData.meals), CSV_TABLES.meals],
     ['momentum-supplements', sortByDay(storeData.supplementLogs), CSV_TABLES.supplements],
+    ['momentum-weights', sortByDay(storeData.weights ?? []), CSV_TABLES.weights],
   ].map(([prefix, rows, columns]) =>
     new File([toCSV(rows, columns)], backupFileName(new Date(), 'csv', prefix), { type: 'text/csv' }));
   const result = await saveFiles(files);

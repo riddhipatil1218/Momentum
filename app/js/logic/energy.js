@@ -108,3 +108,58 @@ export function deficitStreak(balanceByDay, pastDaysNewestFirst) {
 export function poundsFromCalories(kcal) {
   return Math.round((kcal / 3500) * 10) / 10;
 }
+
+/**
+ * Everything behind one day's balance, for the "why" breakdown.
+ * @returns {null | { burned, eaten, balance, inDeficit, everyday, workouts: [{name, emoji, minutes, assumedDuration, kcal}],
+ *                    meals: [{name, kcal, date}], weightLb }}
+ */
+export function balanceBreakdown(profile, dayMeals, dayWorkouts) {
+  if (!dayMeals.length) return null;
+  const everyday = Math.round(bmr(profile) * EVERYDAY_FACTOR);
+  const workouts = dayWorkouts.map((w) => {
+    const { kcal, assumedDuration } = workoutCalories(w, profile.weightLb);
+    return { name: w.activityName, emoji: w.emoji, minutes: w.durationMinutes > 0 ? w.durationMinutes : DEFAULT_WORKOUT_MINUTES, assumedDuration, kcal };
+  });
+  const meals = [...dayMeals]
+    .sort((a, b) => String(a.date).localeCompare(String(b.date)))
+    .map((m) => ({ name: m.name, kcal: Math.round(Number(m.calories) || 0), date: m.date }));
+  const burned = everyday + workouts.reduce((s, w) => s + w.kcal, 0);
+  const eaten = meals.reduce((s, m) => s + m.kcal, 0);
+  return { burned, eaten, balance: burned - eaten, inDeficit: burned - eaten > 0, everyday, workouts, meals, weightLb: profile.weightLb };
+}
+
+/** A few plain-language reasons for a day's deficit or surplus. */
+export function explainBalance(day, calorieTarget = null) {
+  const lines = [];
+  const fmt = (n) => Math.round(n).toLocaleString('en-US');
+  lines.push(day.inDeficit
+    ? `You ate ${fmt(day.eaten)} kcal, ${fmt(day.balance)} less than the ${fmt(day.burned)} you burned.`
+    : `You ate ${fmt(day.eaten)} kcal, ${fmt(-day.balance)} more than the ${fmt(day.burned)} you burned.`);
+
+  const workoutKcal = day.workouts.reduce((s, w) => s + w.kcal, 0);
+  if (workoutKcal > 0) {
+    const verb = day.inDeficit ? 'helped by adding' : 'added';
+    lines.push(`Your ${day.workouts.length === 1 ? 'workout' : `${day.workouts.length} workouts`} ${verb} ${fmt(workoutKcal)} kcal to your burn.`);
+  } else {
+    lines.push(`No workout logged, so your burn was just your everyday ${fmt(day.everyday)} kcal.`);
+  }
+
+  if (day.meals.length > 1) {
+    const biggest = day.meals.reduce((a, b) => (b.kcal > a.kcal ? b : a));
+    const share = day.eaten > 0 ? Math.round((biggest.kcal / day.eaten) * 100) : 0;
+    if (share >= 35) lines.push(`Your biggest meal, ${biggest.name}, was ${fmt(biggest.kcal)} kcal (${share}% of the day).`);
+  }
+
+  if (!day.inDeficit && workoutKcal === 0 && day.eaten - day.everyday < 400) {
+    lines.push(`A ${fmt(Math.ceil((-day.balance + 1) / 50) * 50)} kcal workout or smaller portions would have tipped this into a deficit.`);
+  }
+
+  if (calorieTarget > 0) {
+    const diff = day.eaten - calorieTarget;
+    if (Math.abs(diff) <= calorieTarget * 0.05) lines.push(`You ate right around your ${fmt(calorieTarget)} kcal target.`);
+    else if (diff < 0) lines.push(`You were ${fmt(-diff)} kcal under your ${fmt(calorieTarget)} kcal target.`);
+    else lines.push(`You were ${fmt(diff)} kcal over your ${fmt(calorieTarget)} kcal target.`);
+  }
+  return lines;
+}

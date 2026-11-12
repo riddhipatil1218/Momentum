@@ -36,6 +36,12 @@ const MIGRATIONS = [
 
     db.createObjectStore('savedMeals', { keyPath: 'id' });
   },
+
+  // Version 3 — Weight: weigh-ins (about every 2 weeks). Only adds a new store.
+  (db) => {
+    const weights = db.createObjectStore('weights', { keyPath: 'id' });
+    weights.createIndex('dayKey', 'dayKey');
+  },
 ];
 
 export const DB_VERSION = MIGRATIONS.length;

@@ -9,7 +9,7 @@ export const BACKUP_APP = 'momentum';
 export const BACKUP_FORMAT = 1;
 
 /** Tables included in a backup, in the order they're restored. */
-export const BACKUP_STORES = ['activityTypes', 'supplements', 'workouts', 'supplementLogs', 'meals', 'savedMeals'];
+export const BACKUP_STORES = ['activityTypes', 'supplements', 'workouts', 'supplementLogs', 'meals', 'savedMeals', 'weights'];
 
 /** Settings (meta keys) included in a backup. The API key is deliberately not in this list. */
 export const BACKUP_META_KEYS = ['profile', 'targets', 'weeklyGoal', 'setup.done', 'seeded.v1', 'webLookup'];
@@ -56,6 +56,7 @@ export function backupSummary(counts) {
     [counts.workouts, 'workout'],
     [counts.supplementLogs, 'supplement check-in'],
     [counts.meals, 'meal'],
+    [counts.weights, 'weigh-in'],
   ].filter(([n]) => n > 0).map(([n, word]) => `${n.toLocaleString()} ${word}${n === 1 ? '' : 's'}`);
   return parts.length ? parts.join(', ') : 'no logged entries (settings and lists only)';
 }
@@ -97,6 +98,9 @@ export const CSV_TABLES = {
     ['Calories', (m) => m.calories], ['Protein (g)', (m) => m.proteinG], ['Carbs (g)', (m) => m.carbsG],
     ['Fat (g)', (m) => m.fatG], ['Confidence', (m) => m.confidence], ['Assumptions', (m) => m.assumptions],
     ['Description', (m) => m.sourceText],
+  ],
+  weights: [
+    ['Date', (w) => localDate(w.dayKey)], ['Weight (lb)', (w) => w.pounds],
   ],
   supplements: [
     ['Date', (l) => localDate(l.dayKey)], ['Supplement', (l) => l.supplementName], ['Logged at', (l) => dateOf(l.loggedAt)],

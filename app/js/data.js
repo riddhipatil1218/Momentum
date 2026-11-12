@@ -262,3 +262,21 @@ export function moveMeal(meal, newDate) {
   meal.date = newDate.toISOString();
   meal.dayKey = dayKeyFromDate(newDate);
 }
+
+// ---- Weigh-ins (Weight milestone) -----------------------------------------------------
+
+export const allWeights = () => db.getAll('weights');
+export const deleteWeight = (id) => db.delete('weights', id);
+
+/**
+ * Saves a weigh-in. If it's the newest one, your stats' weight is updated too, so calorie
+ * targets suggested later use it. (Your current targets don't change on their own.)
+ */
+export async function logWeight(pounds, date = new Date()) {
+  const entry = { id: newId(), date: date.toISOString(), dayKey: dayKeyFromDate(date), pounds, createdAt: new Date().toISOString() };
+  await db.put('weights', entry);
+  const newest = (await allWeights()).every((w) => w.date <= entry.date);
+  const profile = await getProfile();
+  if (newest && profile) await saveProfile({ ...profile, weightLb: pounds });
+  return entry;
+}
