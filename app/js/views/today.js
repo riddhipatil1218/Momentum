@@ -26,6 +26,12 @@ export async function renderToday(root, { isCurrent }) {
   if (!isCurrent()) return;
 
   const workoutDays = new Set(recent.map((w) => w.dayKey));
+  // Workout names for each day this week, in the order they were logged (shown under each day).
+  const namesByDay = new Map();
+  for (const w of [...recent].sort((a, b) => a.date.localeCompare(b.date))) {
+    if (!week.includes(w.dayKey)) continue;
+    namesByDay.set(w.dayKey, [...(namesByDay.get(w.dayKey) ?? []), w.activityName]);
+  }
   const weekCount = recent.filter((w) => week.includes(w.dayKey)).length;
   const streak = workoutStreak(workoutDays, today);
   const message = encouragement({ workedOutToday: workouts.length > 0, weekCount, goal, streak });
@@ -46,11 +52,15 @@ export async function renderToday(root, { isCurrent }) {
         ${streak >= 2 ? `<span class="streak-chip"><span class="mono">🔥</span> ${streak}-day streak</span>` : ''}
       </div>
       <div class="week-strip">
-        ${week.map((key, i) => `
-          <div class="week-day ${workoutDays.has(key) ? 'done' : ''} ${key === today ? 'today' : ''} ${key > today ? 'future' : ''}">
+        ${week.map((key, i) => {
+          const names = namesByDay.get(key) ?? [];
+          return `
+          <div class="week-day ${names.length ? 'done' : ''} ${key === today ? 'today' : ''} ${key > today ? 'future' : ''}">
             <span class="week-letter">${letters[i]}</span>
-            <span class="week-dot">${workoutDays.has(key) ? '✓' : ''}</span>
-          </div>`).join('')}
+            <span class="week-dot">${names.length ? '✓' : key % 100}</span>
+            <span class="week-names">${names.map((n) => `<span>${escapeHTML(n)}</span>`).join('')}</span>
+          </div>`;
+        }).join('')}
       </div>
       <div class="goal-row">
         <div class="goal-bar"><span style="width:${Math.min(100, (weekCount / goal) * 100)}%"></span></div>

@@ -3,21 +3,25 @@
 // workout lists, and the AI key for meal estimates. Editing opens a sheet; the tab itself
 // only shows the current values, so it can redraw freely.
 
-import { getApiKey, getProfile, getTargets, getWeeklyGoal, removeApiKey, saveApiKey, saveProfile,
+import { getApiKey, getLastBackupAt, getProfile, getTargets, getWeeklyGoal, removeApiKey, saveApiKey, saveProfile,
          saveTargets, saveWeeklyGoal } from '../data.js';
 import { ACTIVITY_LEVELS, formatHeight, profileProblems, suggestTargets } from '../logic/targets.js';
 import { escapeHTML } from '../logic/text.js';
 import { icons } from '../ui/icons.js';
 import { openSheet } from '../ui/sheet.js';
+import { exportBackup, exportSpreadsheets, openRestoreSheet } from './backupView.js';
 import { openManageActivities, openManageSupplements } from './manage.js';
 import { explanation } from './onboarding.js';
 import { fillTargets, readStatsForm, readTargets, statsFormHTML, targetsFieldsHTML,
          updateMacroSum } from './statsForm.js';
 
 export async function renderSettings(root, { isCurrent }) {
-  const [profile, targets, weeklyGoal, apiKey] = await Promise.all([
-    getProfile(), getTargets(), getWeeklyGoal(), getApiKey(),
+  const [profile, targets, weeklyGoal, apiKey, lastBackupAt] = await Promise.all([
+    getProfile(), getTargets(), getWeeklyGoal(), getApiKey(), getLastBackupAt(),
   ]);
+  const lastBackup = lastBackupAt
+    ? new Date(lastBackupAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+    : 'Never';
   if (!isCurrent()) return;
 
   const activity = ACTIVITY_LEVELS.find((a) => a.id === profile?.activity)?.label;
@@ -79,6 +83,21 @@ export async function renderSettings(root, { isCurrent }) {
       </button>
     </div>
 
+    <h3 class="section-title">Backup</h3>
+    <div class="form-group">
+      <button class="form-row settings-row" data-open="backup">
+        <span class="row-text">
+          <span class="row-title">Back up now</span>
+          <span class="row-subtitle">Last backup: ${escapeHTML(lastBackup)}</span>
+        </span>
+        ${icons.chevronRight}
+      </button>
+      <button class="form-row settings-row" data-open="csv"><span>Export spreadsheets (CSV)</span>${icons.chevronRight}</button>
+      <button class="form-row settings-row" data-open="restore"><span>Restore from a backup</span>${icons.chevronRight}</button>
+    </div>
+    <p class="footnote">Save backups to Files or iCloud Drive. Your data lives only on this phone, so a backup is
+      the way to move it to a new phone or recover it. Backups don’t include your API key.</p>
+
     <p class="footnote">Appearance follows your phone’s light/dark setting.
       Your data is stored only on this phone.</p>`;
 
@@ -94,6 +113,9 @@ export async function renderSettings(root, { isCurrent }) {
       case 'supplements': return openManageSupplements();
       case 'workouts': return openManageActivities();
       case 'apikey': return openApiKeySheet(apiKey);
+      case 'backup': return exportBackup();
+      case 'csv': return exportSpreadsheets();
+      case 'restore': return openRestoreSheet();
     }
   };
   root.onchange = null;

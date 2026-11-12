@@ -53,3 +53,20 @@ test('cheer after logging', () => {
   assert.match(loggedCheer(4, 4), /Goal reached/);
   assert.match(loggedCheer(5, 4), /Above and beyond/);
 });
+
+test('longest run of consecutive days', async () => {
+  const { longestRun } = await import('../app/js/logic/progress.js');
+  const days = [20261101, 20261102, 20261103, 20261104, 20261105, 20261106];
+  assert.equal(longestRun(new Set([20261101, 20261102, 20261104, 20261105, 20261106]), days), 3);
+  assert.equal(longestRun(new Set(), days), 0);
+  assert.equal(longestRun(new Set(days), days), 6);
+});
+
+test('activity breakdown, most frequent first', async () => {
+  const { activityBreakdown } = await import('../app/js/logic/progress.js');
+  const result = activityBreakdown([
+    { activityName: 'Yoga', emoji: 'Y' }, { activityName: 'Running', emoji: 'R' },
+    { activityName: 'Yoga', emoji: 'Y' }, { activityName: 'Pilates', emoji: 'P' },
+  ]);
+  assert.deepEqual(result.map((r) => `${r.name}:${r.count}`), ['Yoga:2', 'Pilates:1', 'Running:1']);
+});

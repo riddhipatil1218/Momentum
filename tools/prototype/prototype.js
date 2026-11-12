@@ -21,6 +21,16 @@ const SAMPLE_WORKOUTS = [
 const SAMPLE_MEALS = [
   [1, 8, { name: 'Greek yogurt bowl', calories: 320, proteinG: 24, carbsG: 38, fatG: 8, confidence: 'medium', assumptions: ['1 cup nonfat Greek yogurt (~130 kcal)', '1/2 cup blueberries (~40 kcal)', '1/3 cup granola (~150 kcal)'] }],
   [1, 13, { name: 'Chicken burrito bowl', calories: 640, proteinG: 42, carbsG: 68, fatG: 20, confidence: 'medium', assumptions: ['4 oz grilled chicken (~180 kcal)', '1/2 cup rice (~105 kcal)', '1/2 cup black beans (~110 kcal)', 'Guacamole, 2 tbsp (~50 kcal)'] }],
+  [2, 9, { name: 'Eggs and toast', calories: 420, proteinG: 22, carbsG: 30, fatG: 22, confidence: 'medium', assumptions: [] }],
+  [2, 13, { name: 'Turkey sandwich', calories: 520, proteinG: 34, carbsG: 52, fatG: 16, confidence: 'medium', assumptions: [] }],
+  [2, 19, { name: 'Salmon, rice and greens', calories: 650, proteinG: 40, carbsG: 60, fatG: 24, confidence: 'medium', assumptions: [] }],
+  [3, 8, { name: 'Protein smoothie', calories: 350, proteinG: 32, carbsG: 40, fatG: 6, confidence: 'high', assumptions: [] }],
+  [3, 18, { name: 'Pasta with meat sauce', calories: 980, proteinG: 38, carbsG: 120, fatG: 34, confidence: 'low', assumptions: [] }],
+  [3, 21, { name: 'Ice cream', calories: 380, proteinG: 6, carbsG: 44, fatG: 20, confidence: 'medium', assumptions: [] }],
+  [4, 12, { name: 'Poke bowl', calories: 610, proteinG: 36, carbsG: 70, fatG: 18, confidence: 'medium', assumptions: [] }],
+  [5, 8, { name: 'Greek yogurt bowl', calories: 320, proteinG: 24, carbsG: 38, fatG: 8, confidence: 'medium', assumptions: [] }],
+  [5, 13, { name: 'Chicken salad', calories: 480, proteinG: 42, carbsG: 18, fatG: 26, confidence: 'medium', assumptions: [] }],
+  [5, 19, { name: 'Steak and potatoes', calories: 720, proteinG: 48, carbsG: 50, fatG: 34, confidence: 'medium', assumptions: [] }],
   [0, 8, { name: 'Oatmeal with banana', calories: 310, proteinG: 9, carbsG: 58, fatG: 5, confidence: 'high', assumptions: ['1/2 cup dry oats (~150 kcal)', '1 medium banana (~105 kcal)', '1 tsp honey (~20 kcal)'] }],
 ];
 
@@ -80,6 +90,9 @@ clearButton.addEventListener('click', async () => {
   location.reload(); // start over at the welcome screen
 });
 
+
+// The preview can't save or share files, so backups explain that instead.
+globalThis.momentumPreview = true;
 
 // ---- Demo estimator ---------------------------------------------------------------------
 // The claude.ai preview can't reach the internet, so the prototype answers with a rough

@@ -3,7 +3,7 @@
 // Used on the Today tab and in the calendar's day sheet.
 
 import { activeSupplements, checkAllSupplements, supplementLogsOnDay, toggleSupplement,
-         workoutsOnDay } from '../data.js';
+         uncheckAllSupplements, workoutsOnDay } from '../data.js';
 import { db } from '../db.js';
 import { workoutSummary } from '../logic/workouts.js';
 import { escapeHTML } from '../logic/text.js';
@@ -69,8 +69,10 @@ export function supplementsCardHTML(supplements, takenIds) {
         <span class="badge ${allDone ? 'supplement' : 'muted'}">${allDone ? 'All done ✓' : `${takenCount} of ${supplements.length}`}</span>
       </div>
       <div class="supp-grid">${rows}</div>
-      ${takenCount < supplements.length
-        ? `<button class="link-button supplement" data-action="check-all">Check all</button>` : ''}
+      <div class="supp-actions">
+        ${takenCount < supplements.length ? '<button class="link-button supplement" data-action="check-all">Check all</button>' : ''}
+        ${takenCount > 0 ? '<button class="link-button muted-link" data-action="uncheck-all">Uncheck all</button>' : ''}
+      </div>
     </section>`;
 }
 
@@ -102,6 +104,11 @@ export async function handleDayCardTap(target, dayKey) {
       await checkAllSupplements(supplements.filter((s) => !takenIds.has(s.id)), dayKey);
       return true;
     }
+
+    case 'uncheck-all':
+      haptic();
+      await uncheckAllSupplements(dayKey);
+      return true;
   }
   return false;
 }

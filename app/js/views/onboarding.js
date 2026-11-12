@@ -5,6 +5,7 @@
 
 import { DEFAULT_WEEKLY_GOAL, markSetupDone, saveProfile, saveTargets, saveWeeklyGoal } from '../data.js';
 import { escapeHTML } from '../logic/text.js';
+import { openRestoreSheet } from './backupView.js';
 import { profileProblems, suggestTargets } from '../logic/targets.js';
 import { readStatsForm, readTargets, statsFormHTML, targetsFieldsHTML, updateMacroSum } from './statsForm.js';
 
@@ -34,6 +35,7 @@ export function runOnboarding(root, onDone) {
         <p class="form-problems" hidden></p>
         <button class="primary-button" type="submit">Calculate my targets</button>
         <button class="text-button centered" type="button" data-skip>Skip for now</button>
+        <button class="text-button centered" type="button" data-restore>New phone? Restore from a backup</button>
       </form>`;
     window.scrollTo(0, 0);
 
@@ -51,6 +53,14 @@ export function runOnboarding(root, onDone) {
         return;
       }
       showTargets();
+    };
+    form.querySelector('[data-restore]').onclick = () => {
+      openRestoreSheet({
+        onRestored: async () => {
+          await markSetupDone();
+          finish();
+        },
+      });
     };
     form.querySelector('[data-skip]').onclick = async () => {
       await markSetupDone();

@@ -4,7 +4,7 @@ A personal app (one user, one iPhone) for logging workouts, supplements, meals/m
 and weight. It's a **web app**: you add it to the iPhone Home Screen and it runs full
 screen like a regular app. All data is stored on the phone.
 
-Status: **Milestones 1–2 live on the phone. Milestone 3 (Macros AI chat) in the prototype, awaiting review.** Sections marked
+Status: **Milestones 1–3 live on the phone. Dashboard, Backup & restore, calendar redesign and Today updates in the prototype, awaiting review.** Sections marked
 *(planned)* are proposals for later milestones and will be confirmed before they're built.
 
 ---
@@ -74,6 +74,14 @@ Newest at the bottom. Superseded decisions are kept (struck through) so the hist
 | D57 | Every logged meal is remembered in **saved meals** (one per name). "Log again" chips show favorites first, then most recent; tap logs it today (with Undo); hold to favorite or remove from the list (history unaffected). | One-tap re-logging. |
 | D58 | Logged meals appear on the Macros tab (with today's totals vs targets) and in the calendar's day sheet, where they can be edited or deleted (Keep/Delete). | Meals are editable like everything else. |
 | D59 | The prototype can't reach the internet, so it uses a small built-in **demo estimator** (labelled "Demo estimate"); the real app asks Claude. | Lets the owner try the chat flow in the prototype. |
+| D60 | Milestone order changed (owner): **Backup & restore** built together with the **Dashboard**, before Weight. | Protects real data before daily logging starts. |
+| D61 | Dashboard "on target" = within **10%** of the goal either way, same rule for calories and each macro; below = under, above = over. Bars cap at 100%. The 7-day view covers the last 7 days (rolling) and leaves days without meals blank. | Simple, predictable rule. |
+| D62 | Status colors (no orange): on target = plum, under = dusty rose, over = red (`--danger`). | Clear states within the palette. |
+| D63 | Backup = one JSON file of every table + stats/targets/settings, **never the API key**. Saved through the iPhone Share sheet (Save to Files, iCloud Drive, Mail) or downloaded. "Last backup" date shown in Settings. | Move to a new phone or recover after deleting the app. |
+| D64 | Restore **adds/updates** every row from the backup and keeps anything already on the phone (no deletions). Files are checked first (app, version, damaged rows) and a summary is shown before restoring. The welcome screen offers "New phone? Restore from a backup". | Safe on a new phone and on the same phone. |
+| D65 | Spreadsheet export: three CSV files (workouts, meals, supplement check-ins), oldest first; formula-like cells are prefixed with ' so spreadsheet apps don't run them. | Data you can open in Numbers/Excel/Sheets. |
+| D66 | Calendar redesign: large rounded day cells, workout days tinted burgundy with dots, today in plum; "<Month> at a glance" tiles (workouts, active days, best streak, supplement days) in burgundy/plum/mauve/rose; workouts-by-type bars; tap the month name to jump to any month/year. Mauve added as a color token. | Bigger, easier to read, more color, more useful. |
+| D67 | Today's "This week" strip shows each day's date and, under it, the names of that day's workouts in small text. Supplements offer both **Check all** and **Uncheck all**. | Owner's request. |
 
 ## 2. File structure
 
@@ -102,6 +110,8 @@ Momentum/
 │       │   ├── targets.js       Mifflin–St Jeor calories + macro targets
 │       │   ├── meals.js         daily totals, saved-meal order
 │       │   ├── mealEstimate.js  AI prompt, JSON schema, request/response, errors
+│       │   ├── goals.js         under / on target / over, 7-day grid
+│       │   ├── backup.js        backup file build/check, CSV
 │       │   ├── progress.js      weekly goal, streaks, encouraging messages
 │       │   ├── text.js          safe HTML text, plurals
 │       │   └── workouts.js      activity kinds, defaults, summary line
@@ -109,10 +119,12 @@ Momentum/
 │       ├── ui/              building blocks: sheets, haptics, icons, date formatting, press-and-hold
 │       └── views/           screens: today, calendar, dayDetail, logWorkout,
 │                            editWorkout, workoutFields, dayCards, manage (list editors),
-│                            onboarding (welcome), settings, statsForm, macros, mealCards, comingSoon
+│                            onboarding (welcome), settings, statsForm, macros, mealCards,
+│                            dashboard, backupView, comingSoon
 ├── tools/prototype/     ← builds the claude.ai prototype (not part of the app)
 ├── tests/               ← npm test
 │   ├── daykey.test.js
+│   ├── goals-backup.test.js
 │   ├── meals.test.js
 │   ├── monthgrid.test.js
 │   ├── ordering.test.js

@@ -43,3 +43,25 @@ export function loggedCheer(weekCount, goal = WEEKLY_WORKOUT_GOAL) {
   if (weekCount > goal) return `That’s ${weekCount} this week. Above and beyond 🌟`;
   return `That’s ${weekCount} of ${goal} this week 🎉`;
 }
+
+/** The longest run of consecutive days (in `orderedDays`) that are in `doneDays`. */
+export function longestRun(doneDays, orderedDays) {
+  let best = 0;
+  let run = 0;
+  for (const day of orderedDays) {
+    run = doneDays.has(day) ? run + 1 : 0;
+    best = Math.max(best, run);
+  }
+  return best;
+}
+
+/** Counts workouts per activity name, most frequent first: [{ name, emoji, count }]. */
+export function activityBreakdown(workouts) {
+  const counts = new Map();
+  for (const w of workouts) {
+    const entry = counts.get(w.activityName) ?? { name: w.activityName, emoji: w.emoji, count: 0 };
+    entry.count++;
+    counts.set(w.activityName, entry);
+  }
+  return [...counts.values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+}

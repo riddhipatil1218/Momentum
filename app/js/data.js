@@ -4,6 +4,7 @@
 
 import { db } from './db.js';
 import { dayKeyFromDate } from './logic/daykey.js';
+import { BACKUP_META_KEYS, BACKUP_STORES } from './logic/backup.js';
 import { mealKey } from './logic/meals.js';
 import { DEFAULT_ACTIVITIES, DEFAULT_SUPPLEMENTS } from './logic/workouts.js';
 
@@ -101,6 +102,12 @@ export async function toggleSupplement(supplement, dayKey, isTaken) {
 /** Checks every supplement not yet taken that day. */
 export async function checkAllSupplements(supplements, dayKey) {
   await db.putMany('supplementLogs', supplements.map((s) => makeLog(s, dayKey)));
+}
+
+/** Unchecks every supplement for a day. */
+export async function uncheckAllSupplements(dayKey) {
+  const logs = await supplementLogsOnDay(dayKey);
+  if (logs.length) await db.deleteMany('supplementLogs', logs.map((l) => l.id));
 }
 
 function makeLog(supplement, dayKey) {
@@ -215,3 +222,31 @@ async function rememberMeal(meal) {
     createdAt: existing?.createdAt ?? new Date().toISOString(),
   });
 }
+
+/** All meals between two day keys (inclusive), e.g. for the Dashboard's 7-day view. */
+export const mealsBetween = (firstDayKey, lastDayKey) => db.getByDayRange('meals', firstDayKey, lastDayKey);
+
+// ---- Backup & restore -------------------------------------------------------------------
+
+/** Everything a backup needs (never the API key; see logic/backup.js). */
+export async function readEverythingForBackup() {
+  const storeData = {};
+  for (const store of BACKUP_STORES) storeData[store] = await db.getAll(store);
+  const meta = {};
+  for (const key of BACKUP_META_KEYS) meta[key] = await db.getMeta(key);
+  return { storeData, meta };
+}
+
+/** Restores a checked backup by adding/updating every row. Nothing already on the phone is deleted. */
+export async function restoreFromBackup(backup) {
+  for (const store of BACKUP_STORES) {
+    const rows = backup.data?.[store] ?? [];
+    if (rows.length) await db.putMany(store, rows);
+  }
+  for (const key of BACKUP_META_KEYS) {
+    if (backup.settings?.[key] !== undefined) await db.setMeta(key, backup.settings[key]);
+  }
+}
+
+export const getLastBackupAt = () => db.getMeta('lastBackupAt');
+export const markBackedUp = () => db.setMeta('lastBackupAt', new Date().toISOString());

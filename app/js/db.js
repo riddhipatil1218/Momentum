@@ -111,6 +111,7 @@ export const db = {
   put: (store, value) => write(store, (s) => s.put(value)),
   putMany: (store, values) => write(store, (s) => values.forEach((v) => s.put(v))),
   delete: (store, id) => write(store, (s) => s.delete(id)),
+  deleteMany: (store, ids) => write(store, (s) => ids.forEach((id) => s.delete(id))),
 
   async getMeta(key) {
     return (await read('meta', (s) => s.get(key)))?.value;

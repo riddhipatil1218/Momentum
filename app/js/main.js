@@ -9,8 +9,8 @@ import { icons } from './ui/icons.js';
 import { installLongPress } from './ui/longpress.js';
 import './views/manage.js'; // press-and-hold editing of supplements & workouts
 import { renderCalendar } from './views/calendar.js';
+import { renderDashboard } from './views/dashboard.js';
 import { renderMacros } from './views/macros.js';
-import { comingSoon } from './views/comingSoon.js';
 import { runOnboarding } from './views/onboarding.js';
 import { renderSettings } from './views/settings.js';
 import { renderToday } from './views/today.js';
@@ -19,8 +19,7 @@ const TABS = [
   { id: 'today', label: 'Today', icon: icons.sun, render: renderToday },
   { id: 'calendar', label: 'Calendar', icon: icons.calendar, render: renderCalendar },
   { id: 'macros', label: 'Macros', icon: icons.chat, render: renderMacros },
-  { id: 'dashboard', label: 'Dashboard', icon: icons.chart,
-    render: comingSoon('Dashboard', '📊', 'Daily macro progress and your 7-day streaks. (Milestone 4)') },
+  { id: 'dashboard', label: 'Dashboard', icon: icons.chart, render: renderDashboard },
   { id: 'settings', label: 'Settings', icon: icons.gear, render: renderSettings },
 ];
 
