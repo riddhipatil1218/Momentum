@@ -21,7 +21,8 @@ Read `SPEC.md` first. It holds the data model, milestones and the decisions log.
 - Units: lb, miles, minutes, °F.
 
 ## Change workflow (SPEC D33)
-1. Make the change in `app/` (+ tests), run `npm test`, check it phone-sized in light and dark.
+1. Make the change in `app/` (+ tests), run `npm test` and `npm run e2e` (click-through tests in
+   `tools/e2e/`; add or update checks for what you changed), check it phone-sized in light and dark.
 2. `bash tools/prototype/build.sh`, then republish the prototype to the SAME claude.ai artifact
    (https://claude.ai/artifact/7YVDwKq4nbXLQAwYpThENj) so the owner can try it.
 3. Only after the owner approves: commit and push to `main`; GitHub tests and publishes it.
@@ -44,8 +45,8 @@ Read `SPEC.md` first. It holds the data model, milestones and the decisions log.
   strict `record_meal_estimate` tool + optional `web_search`, effort medium, fallback on) and is
   unit tested. Don't send `temperature`, `tool_choice` any/tool, or `output_config.format`
   (incompatible with web-search citations). Send assistant turns back unchanged.
-- Test the Macros flow with Playwright by routing `https://api.anthropic.com/v1/messages`
-  to a fake response; never use a real key in tests.
+- Test the Macros flow with the fake Anthropic server in `tools/e2e/helpers.js` (`fakeAnthropic`);
+  never use a real key in tests.
 
 ## Code conventions
 - Any user-typed text shown in HTML goes through `escapeHTML`.

@@ -34,4 +34,7 @@ Install Node.js from nodejs.org (the "LTS" download), then in Terminal from this
 npm test
 ```
 
-You should see `# pass 24` and `# fail 0`.
+You should see `# fail 0`.
+
+There are also click-through tests that use the whole app in a phone-sized browser:
+see `tools/e2e/README.md` (run with `npm run e2e`).

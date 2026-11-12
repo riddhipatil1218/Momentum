@@ -96,6 +96,7 @@ Newest at the bottom. Superseded decisions are kept (struck through) so the hist
 | D79 | **Database version 3** (owner approved the Weight milestone): adds a `weights` store (id, date, dayKey, pounds), indexed by dayKey. Nothing earlier changes; upgrade tested from a version-2 database. Weigh-ins are in backups and a weights CSV. | Weigh-ins need their own table. |
 | D80 | **Weight kept minor** (owner logs about every 2 weeks): Dashboard card with latest weight, change since the first weigh-in, lb to goal, a small chart (goal line + dashed projection), pace and estimated goal date, and "Next weigh-in" (14 days after the last). Because weigh-ins are far apart, the trend is a straight-line fit through weigh-ins in the last ~4 weeks (30 days) instead of a 7-day average; it needs two weigh-ins ≥10 days apart, otherwise "Not enough data yet". Losing vs gaining is judged from the highest weight seen. Weigh-ins can be viewed and deleted (Keep/Delete). | Fits a biweekly habit; replaces the planned 7-day average. |
 | D81 | The newest weigh-in updates the weight in your stats; daily targets don't change by themselves. Calorie burn for each day uses the latest weigh-in on or before that day. | More accurate burn without surprising target changes. |
+| D82 | **Click-through tests saved in the repo** (`tools/e2e/`, run with `npm run e2e`): 7 suites, 100 checks, covering database upgrades, Today, Calendar, Macros (fake Anthropic server), Dashboard (calorie math, "why", weight), backup/restore on a fresh "phone", and the prototype build. Playwright is installed separately with `npm install --no-save playwright` so the app stays library-free; GitHub's publish step still runs only the fast `npm test`. | Keeps the checks for future sessions and for the owner to rerun. |
 
 ## 2. File structure
 
@@ -140,6 +141,7 @@ Momentum/
 │                            onboarding (welcome), settings, statsForm, macros, mealCards,
 │                            dashboard, balanceData, balanceDay, weightView, backupView, comingSoon
 ├── tools/prototype/     ← builds the claude.ai prototype (not part of the app)
+├── tools/e2e/           ← click-through tests in a phone-sized browser (npm run e2e)
 ├── tests/               ← npm test
 │   ├── daykey.test.js
 │   ├── energy.test.js
