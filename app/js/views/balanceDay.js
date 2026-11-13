@@ -5,7 +5,7 @@
 
 import { getTargets } from '../data.js';
 import { addDays, startOfDay, todayKey } from '../logic/daykey.js';
-import { explainBalance } from '../logic/energy.js';
+import { explainBalance, minutesText } from '../logic/energy.js';
 import { escapeHTML } from '../logic/text.js';
 import { formatMediumDate, formatTime } from '../ui/format.js';
 import { icons } from '../ui/icons.js';
@@ -57,6 +57,7 @@ export function openBalanceDay(startDayKey) {
               <div class="ledger-row"><span>Total burn, measured by Oura</span><strong>${fmt(day.oura.totalBurn)}</strong></div>
               ${day.oura.activeCalories ? `<div class="ledger-row muted"><span>of which active calories</span><strong>${fmt(day.oura.activeCalories)}</strong></div>` : ''}
               ${day.oura.steps ? `<div class="ledger-row muted"><span>Steps</span><strong>${fmt(day.oura.steps)}</strong></div>` : ''}
+              ${day.oura.activityMinutes ? `<div class="ledger-row muted"><span>Activity time</span><strong>${minutesText(day.oura.activityMinutes)}</strong></div>` : ''}
               ${day.workouts.map((w) => `
                 <div class="ledger-row muted">
                   <span><span class="ledger-emoji">${escapeHTML(w.emoji ?? '')}</span>${escapeHTML(w.name)} · ${w.minutes} min</span>

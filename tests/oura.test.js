@@ -5,7 +5,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { dayKeyFromIsoDate, matchActivity, normalizeOuraActivity, preselectOuraWorkouts } from '../app/js/logic/oura.js';
-import { balanceBreakdown, dayBalance, explainBalance } from '../app/js/logic/energy.js';
+import { balanceBreakdown, dayBalance, explainBalance, minutesText } from '../app/js/logic/energy.js';
 
 const activities = [
   { name: 'Running' }, { name: 'Stair Master' }, { name: 'Strength Training' }, { name: 'Hot Yoga' },
@@ -14,11 +14,11 @@ const activities = [
 
 test('what Claude read is cleaned up', () => {
   const a = normalizeOuraActivity({
-    date: '2026-11-12', total_burn: 2140.6, active_calories: 512, steps: 9876.4, is_oura: true, notes: '',
+    date: '2026-11-12', total_burn: 2140.6, active_calories: 512, steps: 9876.4, activity_minutes: 83.2, is_oura: true, notes: '',
     workouts: [{ name: 'Strength training', minutes: 45, calories: 260 }, { name: '  ', minutes: 5, calories: 0 }],
   }, 20261113);
   assert.deepEqual(a, {
-    isOura: true, dayKey: 20261112, dateWasRead: true, totalBurn: 2141, activeCalories: 512, steps: 9876,
+    isOura: true, dayKey: 20261112, dateWasRead: true, totalBurn: 2141, activeCalories: 512, steps: 9876, activityMinutes: 83,
     workouts: [{ name: 'Strength training', minutes: 45, calories: 260 }], notes: '',
   });
 });
@@ -68,7 +68,7 @@ test('with Oura, its total burn replaces the estimate (workouts not added twice)
   const day = balanceBreakdown(person, meals, yoga, oura);
   assert.equal(day.burned, 2200);
   assert.equal(day.source, 'oura');
-  assert.deepEqual(day.oura, { totalBurn: 2200, activeCalories: 540, steps: 11000 });
+  assert.deepEqual(day.oura, { totalBurn: 2200, activeCalories: 540, steps: 11000, activityMinutes: 0 });
 });
 
 test('Oura data with no total burn is ignored', () => {
@@ -80,4 +80,14 @@ test('reasons say the burn was measured by Oura', () => {
   assert.equal(lines[0], 'You ate 1,600 kcal, 600 less than the 2,200 you burned.');
   assert.equal(lines[1], 'Your Oura ring measured 2,200 kcal burned, including 540 active calories and 11,000 steps.');
   assert.ok(!lines.some((l) => l.includes('tipped this into a deficit')));
+  const withTime = explainBalance(balanceBreakdown(person, meals, [], { ...oura, activityMinutes: 83 }), 1600);
+  assert.equal(withTime[1], 'Your Oura ring measured 2,200 kcal burned, including 540 active calories, 11,000 steps and 1 h 23 min of activity.');
+  const stepsOnly = explainBalance(balanceBreakdown(person, meals, [], { totalBurn: 2200, steps: 11000 }), 1600);
+  assert.equal(stepsOnly[1], 'Your Oura ring measured 2,200 kcal burned, with 11,000 steps.');
+});
+
+test('activity time reads naturally', () => {
+  assert.equal(minutesText(45), '45 min');
+  assert.equal(minutesText(60), '1 h');
+  assert.equal(minutesText(83), '1 h 23 min');
 });

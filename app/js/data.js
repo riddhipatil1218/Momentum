@@ -299,6 +299,7 @@ export async function saveOuraDay(activity) {
     totalBurn: activity.totalBurn,
     activeCalories: activity.activeCalories,
     steps: activity.steps,
+    activityMinutes: activity.activityMinutes ?? 0, // added in D90 (older records don't have it)
     workouts: activity.workouts,
     savedAt: new Date().toISOString(),
   };

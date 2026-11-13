@@ -148,6 +148,16 @@ function demoEstimate(text) {
   return items;
 }
 
+/** True if a picture is much taller than wide, like a phone screenshot. */
+function isTall(image) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve(img.naturalHeight > img.naturalWidth * 1.6);
+    img.onerror = () => resolve(false);
+    img.src = `data:${image.source.media_type};base64,${image.source.data}`;
+  });
+}
+
 globalThis.momentumDemoEstimator = async (messages, { ouraEnabled = false } = {}) => {
   await new Promise((resolve) => setTimeout(resolve, 900)); // feel like a real request
   // Use every message in this meal's conversation, later amounts winning.
@@ -156,15 +166,16 @@ globalThis.momentumDemoEstimator = async (messages, { ouraEnabled = false } = {}
     ? content.filter((b) => b.type === 'text').map((b) => b.text).join(' ')
     : String(content));
   const hasPhoto = userTurns.some((m) => Array.isArray(m.content) && m.content.some((b) => b.type === 'image'));
-  // An Oura screenshot (the app adds this sentence when you pick "Oura screenshot").
-  const lastText = textOf(userTurns.at(-1)?.content ?? '');
-  if (ouraEnabled && lastText.includes('screenshot from my Oura app')) {
+  // The demo can't read pictures, so it guesses: a tall picture (a phone screenshot) sent with
+  // Oura on is treated as an Oura screenshot; anything else as food.
+  const lastImage = (userTurns.at(-1)?.content ?? []).find?.((b) => b.type === 'image');
+  if (ouraEnabled && lastImage && await isTall(lastImage)) {
     const id = `demo_${Date.now()}`;
     const input = {
-      date: '', total_burn: 2180, active_calories: 560, steps: 10450, is_oura: true, notes: '',
+      date: '', total_burn: 2180, active_calories: 560, steps: 10450, activity_minutes: 83, is_oura: true, notes: '',
       workouts: [{ name: 'Strength training', minutes: 45, calories: 240 }, { name: 'Walking', minutes: 30, calories: 110 }],
     };
-    return { kind: 'oura', oura: input, toolUseId: id, sources: [], assistantContent: [{ type: 'tool_use', id, name: 'record_oura_activity', input }] };
+    return { kind: 'oura', oura: input, toolUseId: id, sources: [], newMessages: [{ role: 'assistant', content: [{ type: 'tool_use', id, name: 'record_oura_activity', input }] }] };
   }
   const byName = new Map();
   for (const turn of userTurns) for (const item of demoEstimate(textOf(turn.content))) byName.set(item.name, item);
@@ -198,6 +209,6 @@ globalThis.momentumDemoEstimator = async (messages, { ouraEnabled = false } = {}
     estimate,
     toolUseId,
     sources: [],
-    assistantContent: [{ type: 'tool_use', id: toolUseId, name: 'record_meal_estimate', input: estimate }],
+    newMessages: [{ role: 'assistant', content: [{ type: 'tool_use', id: toolUseId, name: 'record_meal_estimate', input: estimate }] }],
   };
 };

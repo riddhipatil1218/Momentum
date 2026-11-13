@@ -1,5 +1,5 @@
 // oura.js — Oura ring screenshots (FAKE Anthropic server, never a real key): the setting,
-// marking a photo as an Oura screenshot, the card (numbers + workouts, already-logged ones
+// pasting a screenshot (Claude recognizes it by itself, no switch), the card (numbers + workouts, already-logged ones
 // unticked), saving, the Dashboard using Oura's total burn, and turning Oura off again.
 
 import { check, dayAgo, fakeAnthropic, newPhone, onboard, putRecords, text } from '../helpers.js';
@@ -9,7 +9,7 @@ const ouraReply = (input, id = 'toolu_oura') => ({
   content: [{ type: 'thinking', thinking: '', signature: 'sig' }, { type: 'tool_use', id, name: 'record_oura_activity', input }],
 });
 const SCREENSHOT = {
-  date: '', total_burn: 2150, active_calories: 520, steps: 10234, is_oura: true, notes: '',
+  date: '', total_burn: 2150, active_calories: 520, steps: 10234, activity_minutes: 83, is_oura: true, notes: '',
   workouts: [{ name: 'Strength training', minutes: 45, calories: 240 }, { name: 'Walking', minutes: 30, calories: 110 }],
 };
 
@@ -23,11 +23,12 @@ export async function ouraSuite(browser, { appUrl, iconPath, screenshots }) {
     workouts: [{ id: 'w1', ...dayAgo(0, 7), activityName: 'Strength Training', emoji: '🏋️‍♀️', detailKind: 'strength', durationMinutes: 45, notes: '' }],
   });
 
-  // Off by default: no Oura option, estimate used
+  // Off by default: the estimate is used, and a photo is sent as food
   await page.click('[data-tab="macros"]');
   await page.setInputFiles('[data-photo]', iconPath);
   await page.waitForSelector('.photo-preview img');
-  check('with Oura off, photos have no Oura option', (await page.locator('input[name="photoKind"]').count()) === 0);
+  check('photos have no Meal/Oura switch to pick', (await page.locator('input[name="photoKind"]').count()) === 0);
+  check('there’s no separate Paste button', (await page.locator('[data-action="paste-photo"]').count()) === 0);
   await page.click('[data-action="remove-photo"]');
 
   // Turn it on
@@ -37,10 +38,16 @@ export async function ouraSuite(browser, { appUrl, iconPath, screenshots }) {
   await page.waitForTimeout(300);
   check('Oura can be turned on any time', await page.isChecked('[data-oura-enabled]'));
 
-  const requests = await fakeAnthropic(page, () => ({ json: ouraReply(SCREENSHOT) }));
+  // The fake Claude first answers in words (no tool), then fills in the Oura form when reminded.
+  const requests = await fakeAnthropic(page, (body, n) => ({
+    json: n === 1
+      ? { id: 'msg_test', type: 'message', role: 'assistant', model: 'claude-opus-5-5', stop_reason: 'end_turn',
+          content: [{ type: 'text', text: 'This looks like your Oura activity screen.' }] }
+      : ouraReply(SCREENSHOT),
+  }));
   await page.click('[data-tab="macros"]');
 
-  // Pasting straight into the message box: a copied picture attaches, text pastes as normal.
+  // Pasting straight into the message box attaches the picture (text would paste as normal).
   await page.evaluate(async (url) => {
     const blob = await (await fetch(url)).blob();
     const data = new DataTransfer();
@@ -48,36 +55,22 @@ export async function ouraSuite(browser, { appUrl, iconPath, screenshots }) {
     document.querySelector('textarea[name="message"]').dispatchEvent(new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }));
   }, 'icons/icon-180.png');
   await page.waitForSelector('.photo-preview img');
-  check('pasting a picture into the message box attaches it', await page.isVisible('.photo-preview img'));
-  await page.click('[data-action="remove-photo"]');
-
-  // The Paste button reads a copied screenshot from the clipboard.
-  await context.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: new URL(appUrl).origin });
-  await page.evaluate(() => navigator.clipboard.writeText('just words'));
-  await page.click('[data-action="paste-photo"]');
-  await page.waitForSelector('.toast');
-  check('Paste with no picture copied explains how to copy one', (await text(page, '.toast')).startsWith('No picture copied'));
-  await page.evaluate(async (url) => {
-    const blob = await (await fetch(url)).blob();
-    await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-  }, 'icons/icon-180.png');
-  await page.click('[data-action="paste-photo"]');
-  await page.waitForSelector('.photo-preview img');
-  check('the Paste button attaches a copied screenshot', await page.isVisible('.photo-preview img'));
-  check('a pasted picture starts as a Meal photo until you pick Oura',
-    await page.isChecked('input[name="photoKind"][value="meal"]'));
-  await page.click('.segmented >> text=Oura screenshot');
+  check('pasting a screenshot into the message box attaches it', await page.isVisible('.photo-preview img'));
   await page.click('.send-button');
   await page.waitForSelector('.oura-card');
 
   const req = requests[0].body;
   check('the request offers the Oura tool', req.tools.some((t) => t.name === 'record_oura_activity' && t.strict === true));
-  check('the message says it’s an Oura screenshot and gives today’s date',
-    req.messages[0].content.some((b) => b.type === 'text' && b.text.startsWith('This is a screenshot from my Oura app. Today is')));
-  check('the card shows total burn, active calories and steps',
+  check('the message lets Claude decide food or Oura and gives today’s date',
+    req.messages[0].content.some((b) => b.type === 'text' && b.text.startsWith('This photo is either food') && b.text.includes('Today is')));
+  check('if Claude answers in words, it’s reminded once and the card still appears (no error)',
+    requests.length === 2 && (await page.locator('.bubble.error').count()) === 0);
+  check('the card shows total burn, active calories, steps and activity time',
     (await page.inputValue('.oura-card input[name="totalBurn"]')) === '2150' &&
     (await page.inputValue('.oura-card input[name="activeCalories"]')) === '520' &&
-    (await page.inputValue('.oura-card input[name="steps"]')) === '10234');
+    (await page.inputValue('.oura-card input[name="steps"]')) === '10234' &&
+    (await page.inputValue('.oura-card input[name="activityMinutes"]')) === '83');
+  if (screenshots) await page.screenshot({ path: `${screenshots}/oura-card.png` });
   const boxes = page.locator('.oura-card input[name="pickWorkout"]');
   check('a workout already in your log starts unticked; a new one starts ticked',
     !(await boxes.nth(0).isChecked()) && (await boxes.nth(1).isChecked()));
@@ -105,6 +98,7 @@ export async function ouraSuite(browser, { appUrl, iconPath, screenshots }) {
   await page.click('.balance-today');
   await page.waitForSelector('.reasons');
   check('the day’s reasons say Oura measured the burn', (await page.locator('.reasons li').allTextContents()).some((r) => r.startsWith('Your Oura ring measured 2,200 kcal')));
+  check('the breakdown shows activity time', (await text(page, '.ledger >> nth=0')).includes('Activity time'));
   check('the breakdown lists Oura’s total and marks workouts as included',
     (await text(page, '.ledger >> nth=0')).includes('Total burn, measured by Oura') && (await text(page, '.ledger >> nth=0')).includes('included'));
   await page.click('.sheet-right button'); await page.waitForTimeout(300);

@@ -737,9 +737,6 @@ body[data-tab="macros"] .view { padding-bottom: calc(var(--tabbar-height) + env(
   display: grid; place-items: center; color: var(--accent-strong);
   background: var(--card); border: 1px solid var(--border); box-shadow: var(--shadow);
 }
-/* The Paste button looks like the camera button, not like the filled Send button. */
-.composer button.photo-button { background: var(--card); color: var(--accent-strong); border: 1px solid var(--border); box-shadow: var(--shadow); }
-.composer button.photo-button:active { background: var(--fill); }
 .photo-preview { position: relative; align-self: flex-start; }
 .photo-preview img { display: block; height: 64px; max-width: 120px; object-fit: cover; border-radius: 12px; box-shadow: var(--shadow); }
 .photo-preview button {
@@ -856,6 +853,7 @@ button.balance-col:active .balance-track { opacity: 0.7; }
 body[data-tab="macros"]:has(.composer .photo-preview) .view { padding-bottom: calc(var(--tabbar-height) + env(safe-area-inset-bottom, 0px) + 180px); }
 .segmented.small span { padding: 5px 10px; font-size: 13px; }
 .estimate-grid.three { grid-template-columns: repeat(3, 1fr); }
+.estimate-grid.two { grid-template-columns: repeat(2, 1fr); } /* Oura card: big numbers like 10,234 steps need room */
 .oura-title { flex: 1; font-family: var(--font-display); font-size: 17px; font-weight: 700; }
 .date-input.small { font-size: 15px; padding: 5px 8px; }
 .oura-workouts { display: flex; flex-direction: column; gap: 4px; }

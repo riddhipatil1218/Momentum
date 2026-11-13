@@ -23,6 +23,7 @@ export function normalizeOuraActivity(data, fallbackDayKey) {
     totalBurn: number(data?.total_burn),
     activeCalories: number(data?.active_calories),
     steps: number(data?.steps),
+    activityMinutes: number(data?.activity_minutes),
     workouts,
     notes: String(data?.notes ?? '').trim(),
   };

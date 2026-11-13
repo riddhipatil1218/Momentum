@@ -138,11 +138,18 @@ export function balanceBreakdown(profile, dayMeals, dayWorkouts, ouraDay = null)
   return {
     burned, eaten, balance: burned - eaten, inDeficit: burned - eaten > 0, everyday, workouts, meals, weightLb: profile.weightLb,
     source: measured ? 'oura' : 'estimate',
-    oura: measured ? { totalBurn: measured, activeCalories: ouraDay.activeCalories ?? 0, steps: ouraDay.steps ?? 0 } : null,
+    oura: measured ? { totalBurn: measured, activeCalories: ouraDay.activeCalories ?? 0, steps: ouraDay.steps ?? 0,
+                       activityMinutes: ouraDay.activityMinutes ?? 0 } : null,
   };
 }
 
 /** A few plain-language reasons for a day's deficit or surplus. */
+/** 83 → "1 h 23 min", 45 → "45 min". */
+export function minutesText(minutes) {
+  const m = Math.round(minutes);
+  return m >= 60 ? `${Math.floor(m / 60)} h${m % 60 ? ` ${m % 60} min` : ''}` : `${m} min`;
+}
+
 export function explainBalance(day, calorieTarget = null) {
   const lines = [];
   const fmt = (n) => Math.round(n).toLocaleString('en-US');
@@ -152,9 +159,15 @@ export function explainBalance(day, calorieTarget = null) {
 
   const workoutKcal = day.workouts.reduce((s, w) => s + w.kcal, 0);
   if (day.source === 'oura') {
-    const active = day.oura?.activeCalories > 0 ? `, including ${fmt(day.oura.activeCalories)} active calories` : '';
-    const steps = day.oura?.steps > 0 ? ` and ${fmt(day.oura.steps)} steps` : '';
-    lines.push(`Your Oura ring measured ${fmt(day.burned)} kcal burned${active}${steps}.`);
+    // e.g. "…, including 540 active calories, 11,000 steps and 1 h 23 min of activity."
+    const extras = [
+      day.oura?.activeCalories > 0 ? `including ${fmt(day.oura.activeCalories)} active calories` : '',
+      day.oura?.steps > 0 ? `${fmt(day.oura.steps)} steps` : '',
+      day.oura?.activityMinutes > 0 ? `${minutesText(day.oura.activityMinutes)} of activity` : '',
+    ].filter(Boolean);
+    if (extras.length && !extras[0].startsWith('including')) extras[0] = `with ${extras[0]}`;
+    const list = extras.length > 1 ? `${extras.slice(0, -1).join(', ')} and ${extras.at(-1)}` : (extras[0] ?? '');
+    lines.push(`Your Oura ring measured ${fmt(day.burned)} kcal burned${list ? `, ${list}` : ''}.`);
   } else if (workoutKcal > 0) {
     const verb = day.inDeficit ? 'helped by adding' : 'added';
     lines.push(`Your ${day.workouts.length === 1 ? 'workout' : `${day.workouts.length} workouts`} ${verb} ${fmt(workoutKcal)} kcal to your burn.`);

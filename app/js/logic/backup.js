@@ -104,7 +104,7 @@ export const CSV_TABLES = {
   ],
   oura: [
     ['Date', (o) => localDate(o.dayKey)], ['Total burn (kcal)', (o) => o.totalBurn], ['Active calories', (o) => o.activeCalories],
-    ['Steps', (o) => o.steps], ['Workouts', (o) => (o.workouts ?? []).map((w) => `${w.name} ${w.minutes} min`)],
+    ['Steps', (o) => o.steps], ['Activity time (min)', (o) => o.activityMinutes ?? ''], ['Workouts', (o) => (o.workouts ?? []).map((w) => `${w.name} ${w.minutes} min`)],
   ],
   supplements: [
     ['Date', (l) => localDate(l.dayKey)], ['Supplement', (l) => l.supplementName], ['Logged at', (l) => dateOf(l.loggedAt)],

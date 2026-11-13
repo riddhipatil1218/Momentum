@@ -37,7 +37,9 @@ Fields:
 
 When the user replies with a correction (a different portion, a swap, an addition or removal), call record_meal_estimate again with the full updated estimate for the whole meal, not just the change.
 
-Oura ring screenshots: if the record_oura_activity tool is available and the user sends a screenshot from the Oura app (activity, calories burned, steps or workouts), call record_oura_activity instead of record_meal_estimate. Copy the numbers exactly as shown; don't estimate or calculate them. total_burn is Oura's "Total burn" (or total calories); active_calories is "Active calories" (or active burn); use 0 for anything not shown. date: the day the screenshot is about, as YYYY-MM-DD; use the user's stated date for "Today" or "Yesterday", and "" if no day is visible. List each workout with its name as Oura shows it, minutes and calories (0 if not shown). is_oura: false if the image isn't an Oura screenshot; then explain in notes. If the user corrects a number, call record_oura_activity again with the full corrected data.`;
+Always answer by calling a tool. Never reply with only text.
+
+Oura ring screenshots: look at every photo and decide what it is yourself; the user doesn't label them. If the record_oura_activity tool is available and the photo is a screenshot from the Oura app (activity, calories burned, steps, activity time or workouts), call record_oura_activity instead of record_meal_estimate. Copy the numbers exactly as shown; don't estimate or calculate them. total_burn is Oura's "Total burn" (or total calories); active_calories is "Active calories" (or active burn); steps is the step count; activity_minutes is Oura's "Activity time" in minutes (e.g. "1h 23m" = 83); use 0 for anything not shown. If the photo is an Oura screenshot but record_oura_activity is not available, call record_meal_estimate with is_food false, all numbers 0, and assumptions ["This looks like an Oura screenshot. Turn on Settings → Oura ring, then send it again."]. date: the day the screenshot is about, as YYYY-MM-DD; use the user's stated date for "Today" or "Yesterday", and "" if no day is visible. List each workout with its name as Oura shows it, minutes and calories (0 if not shown). is_oura: false if the image isn't an Oura screenshot; then explain in notes. If the user corrects a number, call record_oura_activity again with the full corrected data.`;
 
 export const ESTIMATE_SCHEMA = {
   type: 'object',
@@ -71,6 +73,7 @@ export const OURA_SCHEMA = {
     total_burn: { type: 'number' },
     active_calories: { type: 'number' },
     steps: { type: 'number' },
+    activity_minutes: { type: 'number' },
     workouts: {
       type: 'array',
       items: {
@@ -83,13 +86,13 @@ export const OURA_SCHEMA = {
     is_oura: { type: 'boolean' },
     notes: { type: 'string' },
   },
-  required: ['date', 'total_burn', 'active_calories', 'steps', 'workouts', 'is_oura', 'notes'],
+  required: ['date', 'total_burn', 'active_calories', 'steps', 'activity_minutes', 'workouts', 'is_oura', 'notes'],
   additionalProperties: false,
 };
 
 export const OURA_TOOL = {
   name: OURA_TOOL_NAME,
-  description: 'Record the activity numbers shown in an Oura app screenshot (total burn, active calories, steps, workouts). Use only for Oura screenshots.',
+  description: 'Record the activity numbers shown in an Oura app screenshot (total burn, active calories, steps, activity time, workouts). Use only for Oura screenshots.',
   strict: true,
   input_schema: OURA_SCHEMA,
 };
@@ -129,7 +132,8 @@ export function buildHeaders(apiKey, { withFallback = true } = {}) {
  * user turn must start by answering that call (a tool_result), then the new message.
  * @param {string} text
  * @param {{ pendingToolUseId?: string, image?: { mediaType: string, data: string }, ouraFor?: string }} options
- *        ouraFor: set when the photo is an Oura screenshot, e.g. "Friday, November 13, 2026" (today)
+ *        ouraFor: set when a photo is sent with Oura turned on: today's date, e.g. "Friday, November 13, 2026".
+ *        Claude then decides itself whether the photo is food or an Oura screenshot (SPEC D90).
  */
 export function userTurnContent(text, { pendingToolUseId = null, image = null, ouraFor = null } = {}) {
   const content = [];
@@ -139,8 +143,8 @@ export function userTurnContent(text, { pendingToolUseId = null, image = null, o
   if (image) {
     content.push({ type: 'image', source: { type: 'base64', media_type: image.mediaType, data: image.data } });
   }
-  if (ouraFor) {
-    const note = `This is a screenshot from my Oura app. Today is ${ouraFor}.`;
+  if (image && ouraFor) {
+    const note = `This photo is either food (a meal or a nutrition label) or a screenshot from my Oura app. Today is ${ouraFor}.`;
     content.push({ type: 'text', text: text ? `${note}\n\n${text}` : note });
   } else {
     content.push({ type: 'text', text: text || 'Estimate the food in this photo.' });
@@ -167,7 +171,10 @@ export function parseEstimateResponse(response) {
   const content = response?.content ?? [];
   const call = content.filter((b) => b.type === 'tool_use' && (b.name === ESTIMATE_TOOL_NAME || b.name === OURA_TOOL_NAME)).at(-1);
   if (!call) {
-    throw new EstimateError('Claude didn’t return an estimate that time. Please try again.');
+    const error = new EstimateError('Claude didn’t return an estimate that time. Please try again.');
+    error.noToolCall = true; // the caller asks Claude once more to answer with the tool
+    error.replyText = content.filter((b) => b.type === 'text').map((b) => b.text).join(' ').trim();
+    throw error;
   }
   if (call.name === OURA_TOOL_NAME) {
     return { kind: 'oura', oura: call.input, assistantContent: content, toolUseId: call.id, sources: [] };
@@ -248,6 +255,9 @@ export function isFallbackRejection(status, body) {
 export function isWebSearchRejection(status, body) {
   return status === 400 && /web.?search/i.test(body?.error?.message ?? '');
 }
+
+/** Sent once if Claude answered in words instead of filling in the form (tool). */
+export const ANSWER_WITH_TOOL_NOTE = 'Please give your answer by calling record_meal_estimate, or record_oura_activity for an Oura screenshot if that tool is available.';
 
 /** When you edited the card before replying, tell Claude your numbers. */
 export function editedNote(estimate) {

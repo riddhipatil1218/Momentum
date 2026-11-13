@@ -5,7 +5,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { dayTotals, macroLine, mealKey, sortSavedMeals } from '../app/js/logic/meals.js';
 import { buildHeaders, buildRequestBody, editedNote, EstimateError, friendlyError, isFallbackRejection,
-         isWebSearchRejection, MODEL, normalizeEstimate, parseEstimateResponse, searchSources, userTurnContent }
+         isWebSearchRejection, MODEL, normalizeEstimate, OURA_SCHEMA, parseEstimateResponse, searchSources, SYSTEM_PROMPT,
+         userTurnContent }
   from '../app/js/logic/mealEstimate.js';
 
 // ---- Macro totals -------------------------------------------------------------------
@@ -177,9 +178,65 @@ test('the Oura tool is offered only when Oura is turned on, and its answer is re
   assert.equal(parsed.oura.total_burn, 2100);
 });
 
-test('an Oura screenshot message tells Claude what it is and today’s date', () => {
-  const content = userTurnContent('', { image: { mediaType: 'image/jpeg', data: 'AAAA' }, ouraFor: 'Friday, November 13, 2026' });
+test('with Oura on, a photo lets Claude decide food or Oura screenshot, and gives today’s date', () => {
+  const image = { mediaType: 'image/jpeg', data: 'AAAA' };
+  const content = userTurnContent('', { image, ouraFor: 'Friday, November 13, 2026' });
   assert.equal(content[0].type, 'image');
-  assert.equal(content[1].text, 'This is a screenshot from my Oura app. Today is Friday, November 13, 2026.');
-  assert.ok(userTurnContent('the steps are 9,000', { ouraFor: 'Friday, November 13, 2026' })[0].text.endsWith('the steps are 9,000'));
+  assert.equal(content[1].text,
+    'This photo is either food (a meal or a nutrition label) or a screenshot from my Oura app. Today is Friday, November 13, 2026.');
+  assert.ok(userTurnContent('from this morning', { image, ouraFor: 'Friday, November 13, 2026' })[1].text.endsWith('\n\nfrom this morning'));
+  // No photo (e.g. a correction): just the words.
+  assert.equal(userTurnContent('the steps are 9,000', { ouraFor: 'Friday, November 13, 2026' })[0].text, 'the steps are 9,000');
+  // Oura off: a photo is food.
+  assert.equal(userTurnContent('', { image })[1].text, 'Estimate the food in this photo.');
+});
+
+test('the Oura tool asks for activity time, and the instructions say to always use a tool', () => {
+  assert.ok(OURA_SCHEMA.required.includes('activity_minutes'));
+  assert.ok(SYSTEM_PROMPT.includes('Never reply with only text.'));
+  assert.ok(SYSTEM_PROMPT.includes('"Activity time" in minutes'));
+});
+
+test('a reply in words (no tool call) is flagged so the app can ask once more', () => {
+  try {
+    parseEstimateResponse({ stop_reason: 'end_turn', content: [{ type: 'text', text: 'This is an Oura screenshot.' }] });
+    assert.fail('should throw');
+  } catch (error) {
+    assert.equal(error.noToolCall, true);
+    assert.equal(error.replyText, 'This is an Oura screenshot.');
+  }
+});
+
+// ---- The network call, with a stand-in for fetch (no real key, no internet) -----------
+
+test('if Claude answers in words, it is reminded once and the whole exchange is kept', async () => {
+  const { estimateMeal } = await import('../app/js/services/anthropic.js');
+  const bodies = [];
+  const replies = [
+    { stop_reason: 'end_turn', content: [{ type: 'text', text: 'That looks like an Oura screenshot.' }] },
+    { stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'toolu_1', name: 'record_oura_activity', input: { total_burn: 2000 } }] },
+  ];
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async (url, init) => {
+    bodies.push(JSON.parse(init.body));
+    return { ok: true, status: 200, json: async () => replies.shift() };
+  };
+  try {
+    const first = [{ role: 'user', content: [{ type: 'text', text: 'photo' }] }];
+    const result = await estimateMeal('sk-ant-test-not-a-real-key', first, { ouraEnabled: true });
+    assert.equal(result.kind, 'oura');
+    assert.equal(bodies.length, 2);
+    assert.equal(bodies[1].messages.length, 3); // photo, Claude's words, the reminder
+    assert.equal(bodies[1].messages[1].content[0].text, 'That looks like an Oura screenshot.'); // sent back unchanged
+    assert.deepEqual(result.newMessages.map((m) => m.role), ['assistant', 'user', 'assistant']);
+    assert.equal(result.newMessages[2].content[0].id, 'toolu_1');
+
+    // Words twice in a row: shows Claude's own words instead of a vague error.
+    replies.push(
+      { stop_reason: 'end_turn', content: [{ type: 'text', text: 'I can’t read this picture.' }] },
+      { stop_reason: 'end_turn', content: [{ type: 'text', text: 'I can’t read this picture.' }] });
+    await assert.rejects(estimateMeal('sk-ant-test-not-a-real-key', first), { message: 'I can’t read this picture.' });
+  } finally {
+    globalThis.fetch = realFetch;
+  }
 });

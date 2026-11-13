@@ -2,9 +2,10 @@
 // The Macros tab, top to bottom: today's totals, today's meals (grouped by breakfast,
 // lunch, dinner, snacks), "Log again" chips for saved meals, then the chat: describe a meal
 // (or attach a photo of it or its nutrition label), get an editable estimate from Claude,
-// reply to adjust it, and log it with one tap. With Oura turned on in Settings, a photo can be
-// marked as an Oura screenshot: Claude reads the day's burn, steps and workouts, and saving the
-// card updates that day's calorie balance (and adds the workouts you tick).
+// reply to adjust it, and log it with one tap. Photos can be chosen with the camera button or
+// pasted into the message box. With Oura turned on in Settings, Claude recognizes an Oura
+// screenshot by itself and reads the day's total burn, steps, activity time and workouts; saving
+// the card updates that day's calorie balance (and adds the workouts you tick).
 
 import { activeActivities, allSavedMeals, deleteMeal, deleteSavedMeal, getApiKey, getOuraEnabled, getTargets, getWebLookup,
          logMeal, logWorkout, mealsOnDay, saveOuraDay, saveSavedMeal, saveWorkout, workoutsOnDay } from '../data.js';
@@ -35,7 +36,6 @@ const chat = {
   apiMessages: [],  // the current meal's conversation with Claude (only ever appended to)
   draft: '',        // text in the message box
   photo: null,      // a photo waiting to be sent: { mediaType, data, previewUrl }
-  photoKind: 'meal', // 'meal' or 'oura' (only offered when Oura is turned on)
   pendingToolUseId: null, // Claude's last estimate call, answered at the start of the next message
   pending: false,   // waiting for Claude
   scrollToEnd: false,
@@ -94,21 +94,12 @@ export async function renderMacros(root, { isCurrent, refresh }) {
               <img src="${chat.photo.previewUrl}" alt="Photo to send">
               <button type="button" data-action="remove-photo" aria-label="Remove photo">${icons.close}</button>
             </div>
-            ${ouraEnabled ? `
-              <span class="segmented small" role="radiogroup" aria-label="What is this photo?">
-                <label><input type="radio" name="photoKind" value="meal" ${chat.photoKind !== 'oura' ? 'checked' : ''}><span>Meal</span></label>
-                <label><input type="radio" name="photoKind" value="oura" ${chat.photoKind === 'oura' ? 'checked' : ''}><span>Oura screenshot</span></label>
-              </span>` : ''}
           </div>` : ''}
         <div class="composer-row">
           <label class="photo-button" aria-label="Add a photo of the meal or its nutrition label">
             ${icons.camera}
             <input type="file" accept="image/*" data-photo hidden>
           </label>
-          ${canPasteImages() ? `
-            <button type="button" class="photo-button" data-action="paste-photo" aria-label="Paste a copied picture or screenshot">
-              ${icons.paste}
-            </button>` : ''}
           <textarea name="message" rows="1" placeholder="${chat.photo ? 'Add a note (optional)…' : 'Describe a meal…'}"
                     aria-label="Describe a meal" enterkeyhint="send">${escapeHTML(chat.draft)}</textarea>
           <button type="submit" class="send-button" aria-label="Send" ${chat.pending ? 'disabled' : ''}>${icons.send}</button>
@@ -164,9 +155,8 @@ function introHTML(ouraEnabled) {
       <p>Tell me what you ate, as you’d say it to a friend, or tap the camera to send a photo of your
         plate or a nutrition label. Name the restaurant or brand and I’ll look up its official numbers.
         You can correct anything before logging.</p>
-      ${ouraEnabled ? `<p>Using your Oura ring? Copy a screenshot of your Oura activity (calories burned,
-        steps, workouts), tap <b>Paste</b> (or the camera to pick it from Photos), and choose
-        <b>Oura screenshot</b>. I’ll read the numbers for your calorie balance.</p>` : ''}
+      ${ouraEnabled ? `<p>Using your Oura ring? Paste or send a screenshot of your Oura activity and I’ll read
+        your total burn, steps, activity time and workouts for your calorie balance.</p>` : ''}
       <div class="examples">
         ${EXAMPLES.map((text) => `<button class="chip" data-example="${escapeHTML(text)}">${escapeHTML(text)}</button>`).join('')}
       </div>
@@ -265,9 +255,6 @@ async function onTap(event, root) {
     case 'add-key':
       openApiKeySheet(null);
       break;
-    case 'paste-photo':
-      pastePhotoFromClipboard();
-      break;
     case 'remove-photo':
       chat.photo = null;
       rerender();
@@ -291,7 +278,7 @@ function onInput(event) {
       if (y && m && d) item.activity.dayKey = y * 10000 + m * 100 + d;
     } else if (field.name === 'pickWorkout') {
       item.workouts[Number(field.value)].picked = field.checked;
-    } else if (['totalBurn', 'activeCalories', 'steps'].includes(field.name)) {
+    } else if (['totalBurn', 'activeCalories', 'steps', 'activityMinutes'].includes(field.name)) {
       item.activity[field.name] = Math.max(0, Math.round(parseNumber(field.value) ?? 0));
     }
     return;
@@ -309,7 +296,6 @@ function onInput(event) {
 }
 
 async function onChange(event) {
-  if (event.target.name === 'photoKind') { chat.photoKind = event.target.value; return; }
   if (event.target.closest('[data-oura]')) { onInput(event); return; }
   // A photo was chosen: shrink it and show it above the message box until sent.
   if (!event.target.matches('[data-photo]')) return;
@@ -317,7 +303,7 @@ async function onChange(event) {
   if (file) await attachPhoto(file);
 }
 
-// ---- Pasting a copied picture (e.g. an Oura screenshot) ----------------------------------
+// ---- Attaching a picture: chosen with the camera button, or pasted --------------------------
 
 /** Shrinks a picture and shows it above the message box until it's sent. */
 async function attachPhoto(fileOrBlob) {
@@ -327,29 +313,6 @@ async function attachPhoto(fileOrBlob) {
     showToast(error.message);
   }
   rerender();
-}
-
-/** The Paste button only appears where the phone/browser lets apps read copied pictures. */
-function canPasteImages() {
-  return typeof navigator.clipboard?.read === 'function';
-}
-
-/** The Paste button: reads a copied picture (iPhone asks you to tap "Paste" to allow it). */
-async function pastePhotoFromClipboard() {
-  try {
-    for (const item of await navigator.clipboard.read()) {
-      const type = item.types.find((t) => t.startsWith('image/'));
-      if (type) {
-        await attachPhoto(await item.getType(type));
-        return;
-      }
-    }
-    showToast('No picture copied. Take a screenshot, tap its preview, then Share → Copy.');
-  } catch (error) {
-    showToast(error?.name === 'NotAllowedError'
-      ? 'Paste wasn’t allowed. Tap Paste again, then tap “Paste” in the bubble that appears.'
-      : 'That couldn’t be pasted. Try the camera button to pick it from Photos.');
-  }
 }
 
 /** Pasting straight into the message box (where the phone allows it): pictures attach, text pastes normally. */
@@ -371,25 +334,25 @@ async function send() {
   const messageText = replyingToEdited ? `${editedNote(last.estimate)}\n\n${text}` : text;
   const pendingToolUseId = chat.pendingToolUseId;
   const ouraEnabled = await getOuraEnabled();
-  const isOuraPhoto = Boolean(photo) && ouraEnabled && chat.photoKind === 'oura';
-  const ouraFor = isOuraPhoto
+  // With Oura on, Claude decides itself whether a photo is food or an Oura screenshot; it gets
+  // today's date so "Today" on a screenshot is saved to the right day.
+  const ouraFor = photo && ouraEnabled
     ? new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) : null;
 
-  chat.items.push({ type: 'user', text, photoUrl: photo?.previewUrl ?? null, oura: isOuraPhoto });
+  chat.items.push({ type: 'user', text, photoUrl: photo?.previewUrl ?? null });
   chat.apiMessages.push({ role: 'user', content: userTurnContent(messageText, { pendingToolUseId, image: photo, ouraFor }) });
   chat.draft = '';
   chat.photo = null;
-  chat.photoKind = 'meal';
   chat.pending = true;
   chat.scrollToEnd = true;
   rerender();
 
   try {
     const [apiKey, webLookup] = await Promise.all([getApiKey(), getWebLookup()]);
-    const { kind, estimate, oura, assistantContent, toolUseId, sources } =
+    const { kind, estimate, oura, newMessages, toolUseId, sources } =
       await estimateMeal(apiKey, chat.apiMessages, { webLookup, ouraEnabled });
     // The full reply (thinking, searches, the tool call) goes back unchanged next time.
-    chat.apiMessages.push({ role: 'assistant', content: assistantContent });
+    chat.apiMessages.push(...newMessages);
     chat.pendingToolUseId = toolUseId;
     if (kind === 'oura') {
       chat.items.push(await ouraItem(oura));
@@ -446,10 +409,11 @@ function ouraCardHTML(item, index) {
         <input class="date-input small" type="date" name="ouraDate" value="${iso}" ${saved ? 'disabled' : ''} aria-label="Day">
       </div>
       ${a.dateWasRead ? '' : '<p class="estimate-hint">No date was visible, so this is set to today. Change it if needed.</p>'}
-      <div class="estimate-grid three">
+      <div class="estimate-grid two">
         ${number('totalBurn', 'Total burn', 'kcal')}
         ${number('activeCalories', 'Active', 'kcal')}
         ${number('steps', 'Steps', '')}
+        ${number('activityMinutes', 'Activity', 'min')}
       </div>
       ${item.workouts.length ? `
         <div class="oura-workouts">
