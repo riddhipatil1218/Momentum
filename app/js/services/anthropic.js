@@ -11,16 +11,16 @@ const MAX_PAUSED_CONTINUES = 3;
 /**
  * @param {string} apiKey
  * @param {Array} messages the conversation so far
- * @param {{ webLookup?: boolean }} options  allow Claude to search the web for nutrition
- * @returns {Promise<{ estimate, assistantContent, toolUseId, sources }>}
+ * @param {{ webLookup?: boolean, ouraEnabled?: boolean }} options  allow web search; offer the Oura tool
+ * @returns {Promise<{ kind, estimate?, oura?, assistantContent, toolUseId, sources }>}
  */
-export async function estimateMeal(apiKey, messages, { webLookup = true } = {}) {
+export async function estimateMeal(apiKey, messages, { webLookup = true, ouraEnabled = false } = {}) {
   // The claude.ai prototype can't reach the internet, so it plugs in a demo estimator.
   if (typeof globalThis.momentumDemoEstimator === 'function') {
-    return globalThis.momentumDemoEstimator(messages);
+    return globalThis.momentumDemoEstimator(messages, { ouraEnabled });
   }
 
-  let options = { withFallback: true, webLookup };
+  let options = { withFallback: true, webLookup, ouraEnabled };
   let conversation = messages;
   const pausedContent = [];
   let pauses = 0;

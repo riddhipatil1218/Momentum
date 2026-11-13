@@ -4,11 +4,12 @@
 // Shared by the Dashboard, the Today tab and the calendar's day sheet.
 //
 // Each day uses the most recent weigh-in on or before it (or your stats' weight if there
-// isn't one), so burn estimates follow your weight over time.
+// isn't one), so burn estimates follow your weight over time. If Oura is turned on in
+// Settings and a day has Oura numbers, Oura's measured total burn is used for that day.
 
-import { allWeights, getProfile, mealsBetween, workoutsBetween } from '../data.js';
+import { allWeights, getOuraEnabled, getProfile, mealsBetween, ouraDaysBetween, workoutsBetween } from '../data.js';
 import { addDays, todayKey } from '../logic/daykey.js';
-import { balanceBreakdown, dailyBurn, dayBalance, deficitStreak } from '../logic/energy.js';
+import { balanceBreakdown, dailyBurn, dayBalance, deficitStreak, ouraBurn } from '../logic/energy.js';
 import { profileProblems } from '../logic/targets.js';
 import { weightOnOrBefore } from '../logic/weight.js';
 
@@ -23,6 +24,12 @@ function profileForDay(profile, weights, dayKey) {
 async function loadProfile() {
   const profile = await getProfile();
   return profile && !profileProblems(profile).length ? profile : null;
+}
+
+/** Oura records by day, or an empty map when Oura is turned off. */
+async function loadOura(first, last) {
+  if (!(await getOuraEnabled())) return new Map();
+  return new Map((await ouraDaysBetween(first, last)).map((o) => [o.dayKey, o]));
 }
 
 const groupByDay = (rows) => {
@@ -41,14 +48,16 @@ export async function loadBalances() {
 
   const today = todayKey();
   const first = addDays(today, -LOOKBACK_DAYS);
-  const [meals, workouts, weights] = await Promise.all([mealsBetween(first, today), workoutsBetween(first, today), allWeights()]);
+  const [meals, workouts, weights, ouraByDay] = await Promise.all([
+    mealsBetween(first, today), workoutsBetween(first, today), allWeights(), loadOura(first, today),
+  ]);
   const mealsByDay = groupByDay(meals);
   const workoutsByDay = groupByDay(workouts);
 
   const balances = new Map();
   for (let i = 0; i <= LOOKBACK_DAYS; i++) {
     const day = addDays(today, -i);
-    balances.set(day, dayBalance(profileForDay(profile, weights, day), mealsByDay.get(day) ?? [], workoutsByDay.get(day) ?? []));
+    balances.set(day, dayBalance(profileForDay(profile, weights, day), mealsByDay.get(day) ?? [], workoutsByDay.get(day) ?? [], ouraByDay.get(day)));
   }
   const pastDays = Array.from({ length: LOOKBACK_DAYS }, (_, i) => addDays(today, -(i + 1)));
 
@@ -58,10 +67,19 @@ export async function loadBalances() {
     today,
     balances,
     streak: deficitStreak(balances, pastDays),
-    todayBurn: dailyBurn(profileForDay(profile, weights, today), workoutsByDay.get(today) ?? []),
+    todayBurn: todayBurnFor(profileForDay(profile, weights, today), workoutsByDay.get(today) ?? [], ouraByDay.get(today)),
     todayEaten: Math.round(todayMeals.reduce((sum, m) => sum + (Number(m.calories) || 0), 0)),
     todayHasMeals: todayMeals.length > 0,
   };
+}
+
+/** Today's burn: Oura's measured total (so far) if there's Oura data for today, else the estimate. */
+function todayBurnFor(profile, workouts, ouraDay) {
+  const estimate = dailyBurn(profile, workouts);
+  const measured = ouraBurn(ouraDay);
+  return measured
+    ? { ...estimate, total: measured, source: 'oura', activeCalories: ouraDay.activeCalories ?? 0 }
+    : { ...estimate, source: 'estimate' };
 }
 
 /**
@@ -71,8 +89,10 @@ export async function loadBalances() {
 export async function loadDayBreakdown(dayKey) {
   const profile = await loadProfile();
   if (!profile) return null;
-  const [meals, workouts, weights] = await Promise.all([mealsBetween(dayKey, dayKey), workoutsBetween(dayKey, dayKey), allWeights()]);
+  const [meals, workouts, weights, ouraByDay] = await Promise.all([
+    mealsBetween(dayKey, dayKey), workoutsBetween(dayKey, dayKey), allWeights(), loadOura(dayKey, dayKey),
+  ]);
   const dayProfile = profileForDay(profile, weights, dayKey);
-  const breakdown = balanceBreakdown(dayProfile, meals, workouts);
+  const breakdown = balanceBreakdown(dayProfile, meals, workouts, ouraByDay.get(dayKey));
   return breakdown ?? { noMeals: true, workouts: workouts.length, weightLb: dayProfile.weightLb };
 }

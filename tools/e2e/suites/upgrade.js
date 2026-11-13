@@ -6,6 +6,7 @@ import { check, newPhone } from '../helpers.js';
 
 const V1_STORES = [['activityTypes'], ['workouts', true], ['supplements'], ['supplementLogs', true], ['meta', false, 'key']];
 const V2_STORES = [...V1_STORES, ['meals', true], ['savedMeals']];
+const V3_STORES = [...V2_STORES, ['weights', true]];
 
 async function makeOldDatabase(page, version, stores) {
   await page.evaluate(({ version, stores }) => new Promise((resolve) => {
@@ -29,7 +30,7 @@ async function makeOldDatabase(page, version, stores) {
 }
 
 export async function upgradeSuite(browser, { appUrl }) {
-  for (const [version, stores] of [[1, V1_STORES], [2, V2_STORES]]) {
+  for (const [version, stores] of [[1, V1_STORES], [2, V2_STORES], [3, V3_STORES]]) {
     const { context, page } = await newPhone(browser);
     await page.goto(`${appUrl}no-app-here`); // same site, app not running
     await makeOldDatabase(page, version, stores);
@@ -39,8 +40,8 @@ export async function upgradeSuite(browser, { appUrl }) {
       const r = indexedDB.open('momentum');
       r.onsuccess = () => { res({ version: r.result.version, stores: [...r.result.objectStoreNames] }); r.result.close(); };
     }));
-    check(`version ${version} database upgrades to the newest version`, info.version >= 3, info.version);
-    check(`version ${version}: new tables added (meals, savedMeals, weights)`, ['meals', 'savedMeals', 'weights'].every((s) => info.stores.includes(s)), info.stores.join(','));
+    check(`version ${version} database upgrades to the newest version`, info.version >= 4, info.version);
+    check(`version ${version}: new tables added (meals, savedMeals, weights, ouraDays)`, ['meals', 'savedMeals', 'weights', 'ouraDays'].every((s) => info.stores.includes(s)), info.stores.join(','));
     check(`version ${version}: the old workout is still there`, (await page.textContent('.workout-row .row-title')) === 'Pilates');
     check(`version ${version}: no page errors`, page.errors.length === 0, page.errors.join('; '));
     await context.close();

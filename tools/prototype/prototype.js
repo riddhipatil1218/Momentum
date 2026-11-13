@@ -10,7 +10,7 @@ import { addDays, dateOnDayAtTime, todayKey } from './js/logic/daykey.js';
 // [days ago, activity name, details, hour]
 const SAMPLE_WORKOUTS = [
   [1, 'Running', { durationMinutes: 32, distanceMiles: 3.2 }, 7],
-  [2, 'Strength Training', { durationMinutes: 45, bodyFocus: 'Glutes', notes: 'Hip thrusts PR' }, 18],
+  [2, 'Strength Training', { durationMinutes: 45, bodyFocus: ['Glutes', 'Core'], notes: 'Hip thrusts PR' }, 18],
   [4, 'Hot Yoga', { durationMinutes: 60, temperatureF: 105 }, 9],
   [5, 'Stair Master', { durationMinutes: 20, stairLevel: 8, floors: 60 }, 17],
   [7, 'Pilates', { durationMinutes: 50 }, 8],
@@ -148,7 +148,7 @@ function demoEstimate(text) {
   return items;
 }
 
-globalThis.momentumDemoEstimator = async (messages) => {
+globalThis.momentumDemoEstimator = async (messages, { ouraEnabled = false } = {}) => {
   await new Promise((resolve) => setTimeout(resolve, 900)); // feel like a real request
   // Use every message in this meal's conversation, later amounts winning.
   const userTurns = messages.filter((m) => m.role === 'user');
@@ -156,6 +156,16 @@ globalThis.momentumDemoEstimator = async (messages) => {
     ? content.filter((b) => b.type === 'text').map((b) => b.text).join(' ')
     : String(content));
   const hasPhoto = userTurns.some((m) => Array.isArray(m.content) && m.content.some((b) => b.type === 'image'));
+  // An Oura screenshot (the app adds this sentence when you pick "Oura screenshot").
+  const lastText = textOf(userTurns.at(-1)?.content ?? '');
+  if (ouraEnabled && lastText.includes('screenshot from my Oura app')) {
+    const id = `demo_${Date.now()}`;
+    const input = {
+      date: '', total_burn: 2180, active_calories: 560, steps: 10450, is_oura: true, notes: '',
+      workouts: [{ name: 'Strength training', minutes: 45, calories: 240 }, { name: 'Walking', minutes: 30, calories: 110 }],
+    };
+    return { kind: 'oura', oura: input, toolUseId: id, sources: [], assistantContent: [{ type: 'tool_use', id, name: 'record_oura_activity', input }] };
+  }
   const byName = new Map();
   for (const turn of userTurns) for (const item of demoEstimate(textOf(turn.content))) byName.set(item.name, item);
   const items = [...byName.values()];
@@ -184,6 +194,7 @@ globalThis.momentumDemoEstimator = async (messages) => {
   }
   const toolUseId = `demo_${Date.now()}`;
   return {
+    kind: 'meal',
     estimate,
     toolUseId,
     sources: [],

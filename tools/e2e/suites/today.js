@@ -40,6 +40,29 @@ export async function todaySuite(browser, { appUrl, screenshots }) {
   await page.waitForTimeout(300);
   check('workout shows its summary', (await page.textContent('.workout-row .row-subtitle')) === '30 min · 3 mi · 10:00 /mi');
 
+  // Strength training with several muscle groups
+  await page.locator('.quick-chip >> text=Strength Training').scrollIntoViewIfNeeded();
+  await page.click('.quick-chip >> text=Strength Training');
+  await page.waitForSelector('.confirmation');
+  await page.click('[data-toggle-details]');
+  await page.click('[data-chip-field="bodyFocus"][data-value="Core"]');
+  await page.click('[data-chip-field="bodyFocus"][data-value="Upper body"]');
+  check('several muscle groups can be picked for one strength workout',
+    (await page.locator('[data-chip-field="bodyFocus"].selected').count()) === 2);
+  await page.click('.sheet-right button');
+  await page.waitForTimeout(300);
+  check('the workout shows all its muscle groups', (await page.locator('.workout-row .row-subtitle').allTextContents()).includes('Upper body + Core'));
+  await page.locator('.workout-row', { hasText: 'Strength Training' }).click();
+  await page.waitForSelector('[data-chip-field="bodyFocus"]');
+  await page.click('[data-chip-field="bodyFocus"][data-value="Core"]');
+  await page.click('.sheet-right button');
+  await page.waitForTimeout(300);
+  check('tapping a picked muscle group again removes it', (await page.locator('.workout-row .row-subtitle').allTextContents()).includes('Upper body'));
+  await page.locator('.workout-row', { hasText: 'Strength Training' }).click();
+  await page.waitForSelector('[data-delete]');
+  await page.click('[data-delete]'); await page.click('[data-confirm-delete]');
+  await page.waitForTimeout(400);
+
   // Undo
   await page.locator('.quick-chip >> text=Pilates').scrollIntoViewIfNeeded();
   await page.click('.quick-chip >> text=Pilates');

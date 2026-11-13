@@ -1,7 +1,7 @@
 // goals.js
 // Whether a day's calories and macros are under, on target, or over (Dashboard).
 //
-// "On target" = within 10% of the goal either way (e.g. 1,386–1,694 for a 1,540 kcal goal).
+// "On target" = within 10% of the goal either way (e.g. 1,800–2,200 for a 2,000 kcal goal).
 // Below that is "under", above it is "over". The same rule is used for every metric.
 
 export const TOLERANCE = 0.10;

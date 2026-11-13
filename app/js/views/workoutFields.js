@@ -6,7 +6,7 @@
 
 import { saveWorkout } from '../data.js';
 import { formatNumber, formatPace, paceMinutesPerMile, parseNumber } from '../logic/numbers.js';
-import { BODY_FOCUS_OPTIONS, DetailKind, DURATION_PRESETS } from '../logic/workouts.js';
+import { BODY_FOCUS_OPTIONS, bodyFocusList, DetailKind, DURATION_PRESETS, toggleBodyFocus } from '../logic/workouts.js';
 import { escapeHTML } from '../logic/text.js';
 
 // "decimal" fields allow 3.1; "whole" fields are rounded to whole numbers.
@@ -23,9 +23,11 @@ function numberRow(label, field, value, unit, kind = 'decimal') {
     </label>`;
 }
 
+// `selected` can be one value or a list (body focus allows several).
 function chips(options, selected, field, format = (v) => v) {
+  const isSelected = (option) => (Array.isArray(selected) ? selected.includes(option) : option === selected);
   return `<div class="chip-row">${options.map((option) => `
-    <button class="chip ${option === selected ? 'selected' : ''}" type="button"
+    <button class="chip ${isSelected(option) ? 'selected' : ''}" type="button"
             data-chip-field="${field}" data-value="${escapeHTML(option)}">${escapeHTML(format(option))}</button>`).join('')}
   </div>`;
 }
@@ -66,8 +68,8 @@ export function workoutFieldsHTML(workout) {
       break;
     case DetailKind.strength:
       extra = `
-        <h4 class="form-section-title">Body focus</h4>
-        <div class="form-group padded">${chips(BODY_FOCUS_OPTIONS, workout.bodyFocus, 'bodyFocus')}</div>
+        <h4 class="form-section-title">Body focus <span class="muted">· pick all that apply</span></h4>
+        <div class="form-group padded">${chips(BODY_FOCUS_OPTIONS, bodyFocusList(workout), 'bodyFocus')}</div>
         ${notesGroup(workout)}`;
       break;
     case DetailKind.hotYoga:
@@ -96,7 +98,10 @@ export function bindWorkoutFields(root, workout) {
   };
   const refreshChips = (field) => {
     root.querySelectorAll(`[data-chip-field="${field}"]`).forEach((chip) => {
-      chip.classList.toggle('selected', String(workout[field]) === chip.dataset.value);
+      const selected = field === 'bodyFocus'
+        ? bodyFocusList(workout).includes(chip.dataset.value)
+        : String(workout[field]) === chip.dataset.value;
+      chip.classList.toggle('selected', selected);
     });
   };
 
@@ -126,6 +131,9 @@ export function bindWorkoutFields(root, workout) {
       const input = root.querySelector('[data-field="durationMinutes"]');
       if (input) input.value = formatNumber(workout.durationMinutes);
       refreshPace();
+    } else if (field === 'bodyFocus') {
+      // Several muscle groups can be picked; tapping one again removes it.
+      workout.bodyFocus = toggleBodyFocus(workout, chip.dataset.value);
     } else {
       // Tapping the selected option again clears it.
       workout[field] = workout[field] === chip.dataset.value ? null : chip.dataset.value;

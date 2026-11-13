@@ -45,7 +45,7 @@ test('daily burn = BMR × 1.2 + workouts', () => {
 
 test('day balance: positive is a deficit; no meals means unknown', () => {
   const meals = [{ calories: 600 }, { calories: 800 }];
-  assert.deepEqual(dayBalance(person, meals, []), { burned: 1701, eaten: 1400, balance: 301, inDeficit: true });
+  assert.deepEqual(dayBalance(person, meals, []), { burned: 1701, eaten: 1400, balance: 301, inDeficit: true, source: 'estimate' });
   assert.equal(dayBalance(person, [{ calories: 2000 }], []).inDeficit, false);
   assert.equal(dayBalance(person, [], []), null);
 });

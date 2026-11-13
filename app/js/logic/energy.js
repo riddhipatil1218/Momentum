@@ -78,15 +78,22 @@ export function dailyBurn(profile, dayWorkouts = []) {
   return { everyday: Math.round(everyday), workouts: Math.round(workouts), total: Math.round(everyday + workouts), assumedDurations };
 }
 
+/** Oura's measured total burn for a day, if there's usable Oura data (else null). */
+export function ouraBurn(ouraDay) {
+  return ouraDay?.totalBurn > 0 ? Math.round(ouraDay.totalBurn) : null;
+}
+
 /**
  * Balance for one day. `balance` > 0 means a deficit (burned more than eaten).
  * Days with no meals logged return null: without food logged we can't know.
+ * With Oura data for the day, Oura's measured Total Burn is used instead of the estimate.
  */
-export function dayBalance(profile, dayMeals, dayWorkouts) {
+export function dayBalance(profile, dayMeals, dayWorkouts, ouraDay = null) {
   if (!dayMeals.length) return null;
-  const burned = dailyBurn(profile, dayWorkouts);
+  const measured = ouraBurn(ouraDay);
+  const burned = measured ?? dailyBurn(profile, dayWorkouts).total;
   const eaten = Math.round(dayMeals.reduce((sum, m) => sum + (Number(m.calories) || 0), 0));
-  return { burned: burned.total, eaten, balance: burned.total - eaten, inDeficit: burned.total - eaten > 0 };
+  return { burned, eaten, balance: burned - eaten, inDeficit: burned - eaten > 0, source: measured ? 'oura' : 'estimate' };
 }
 
 /**
@@ -114,7 +121,7 @@ export function poundsFromCalories(kcal) {
  * @returns {null | { burned, eaten, balance, inDeficit, everyday, workouts: [{name, emoji, minutes, assumedDuration, kcal}],
  *                    meals: [{name, kcal, date}], weightLb }}
  */
-export function balanceBreakdown(profile, dayMeals, dayWorkouts) {
+export function balanceBreakdown(profile, dayMeals, dayWorkouts, ouraDay = null) {
   if (!dayMeals.length) return null;
   const everyday = Math.round(bmr(profile) * EVERYDAY_FACTOR);
   const workouts = dayWorkouts.map((w) => {
@@ -124,9 +131,15 @@ export function balanceBreakdown(profile, dayMeals, dayWorkouts) {
   const meals = [...dayMeals]
     .sort((a, b) => String(a.date).localeCompare(String(b.date)))
     .map((m) => ({ name: m.name, kcal: Math.round(Number(m.calories) || 0), date: m.date }));
-  const burned = everyday + workouts.reduce((s, w) => s + w.kcal, 0);
+  const measured = ouraBurn(ouraDay);
+  // With Oura, its Total Burn already includes everyday life and workouts, so nothing is added on top.
+  const burned = measured ?? everyday + workouts.reduce((s, w) => s + w.kcal, 0);
   const eaten = meals.reduce((s, m) => s + m.kcal, 0);
-  return { burned, eaten, balance: burned - eaten, inDeficit: burned - eaten > 0, everyday, workouts, meals, weightLb: profile.weightLb };
+  return {
+    burned, eaten, balance: burned - eaten, inDeficit: burned - eaten > 0, everyday, workouts, meals, weightLb: profile.weightLb,
+    source: measured ? 'oura' : 'estimate',
+    oura: measured ? { totalBurn: measured, activeCalories: ouraDay.activeCalories ?? 0, steps: ouraDay.steps ?? 0 } : null,
+  };
 }
 
 /** A few plain-language reasons for a day's deficit or surplus. */
@@ -138,7 +151,11 @@ export function explainBalance(day, calorieTarget = null) {
     : `You ate ${fmt(day.eaten)} kcal, ${fmt(-day.balance)} more than the ${fmt(day.burned)} you burned.`);
 
   const workoutKcal = day.workouts.reduce((s, w) => s + w.kcal, 0);
-  if (workoutKcal > 0) {
+  if (day.source === 'oura') {
+    const active = day.oura?.activeCalories > 0 ? `, including ${fmt(day.oura.activeCalories)} active calories` : '';
+    const steps = day.oura?.steps > 0 ? ` and ${fmt(day.oura.steps)} steps` : '';
+    lines.push(`Your Oura ring measured ${fmt(day.burned)} kcal burned${active}${steps}.`);
+  } else if (workoutKcal > 0) {
     const verb = day.inDeficit ? 'helped by adding' : 'added';
     lines.push(`Your ${day.workouts.length === 1 ? 'workout' : `${day.workouts.length} workouts`} ${verb} ${fmt(workoutKcal)} kcal to your burn.`);
   } else {
@@ -151,7 +168,7 @@ export function explainBalance(day, calorieTarget = null) {
     if (share >= 35) lines.push(`Your biggest meal, ${biggest.name}, was ${fmt(biggest.kcal)} kcal (${share}% of the day).`);
   }
 
-  if (!day.inDeficit && workoutKcal === 0 && day.eaten - day.everyday < 400) {
+  if (day.source !== 'oura' && !day.inDeficit && workoutKcal === 0 && day.eaten - day.everyday < 400) {
     lines.push(`A ${fmt(Math.ceil((-day.balance + 1) / 50) * 50)} kcal workout or smaller portions would have tipped this into a deficit.`);
   }
 

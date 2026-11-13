@@ -149,13 +149,16 @@ function balanceCardHTML(data, days) {
           <span>${left >= 0 ? 'kcal left today and still in a deficit' : 'kcal over today’s burn'}</span>
         </div>
         <div class="balance-parts">
-          <div><span>Burned (est.)</span><strong>${todayBurn.total.toLocaleString()}</strong></div>
+          <div><span>${todayBurn.source === 'oura' ? 'Burned (Oura)' : 'Burned (est.)'}</span><strong>${todayBurn.total.toLocaleString()}</strong></div>
           <div><span>Eaten</span><strong>${todayEaten.toLocaleString()}</strong></div>
         </div>
       </button>
-      <p class="footnote">Burn = ${todayBurn.everyday.toLocaleString()} kcal from your stats (resting + daily life)
+      <p class="footnote">${todayBurn.source === 'oura'
+        ? `Burn = ${todayBurn.total.toLocaleString()} kcal measured by your Oura ring so far today${todayBurn.activeCalories
+            ? ` (${todayBurn.activeCalories.toLocaleString()} active)` : ''}. Send a newer screenshot later to update it.`
+        : `Burn = ${todayBurn.everyday.toLocaleString()} kcal from your stats (resting + daily life)
         + ${todayBurn.workouts.toLocaleString()} kcal from today’s workouts${todayBurn.assumedDurations
-          ? ` (${todayBurn.assumedDurations} without a duration counted as 45 min)` : ''}.</p>
+          ? ` (${todayBurn.assumedDurations} without a duration counted as 45 min)` : ''}.`}</p>
 
       <div class="section-title-row inline-title">
         <h4 class="form-section-title">Last 7 days</h4>

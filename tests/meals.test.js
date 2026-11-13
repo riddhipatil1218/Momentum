@@ -160,3 +160,26 @@ test('edited card values are passed along with the next reply', () => {
   assert.equal(editedNote({ name: 'Oatmeal', calories: 350, proteinG: 12, carbsG: 55, fatG: 8 }),
     '(I adjusted the last estimate to: Oatmeal, 350 kcal, 12 g protein, 55 g carbs, 8 g fat.)');
 });
+
+test('the Oura tool is offered only when Oura is turned on, and its answer is recognised', async () => {
+  const { OURA_TOOL_NAME } = await import('../app/js/logic/mealEstimate.js');
+  assert.equal(buildRequestBody([]).tools.some((t) => t.name === OURA_TOOL_NAME), false);
+  const tools = buildRequestBody([], { ouraEnabled: true }).tools;
+  const ouraTool = tools.find((t) => t.name === OURA_TOOL_NAME);
+  assert.equal(ouraTool.strict, true);
+  assert.equal(ouraTool.input_schema.properties.workouts.items.additionalProperties, false);
+  assert.deepEqual(tools.map((t) => t.name), ['record_meal_estimate', 'record_oura_activity', 'web_search']);
+
+  const reply = { stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'toolu_oura', name: OURA_TOOL_NAME, input: { total_burn: 2100 } }] };
+  const parsed = parseEstimateResponse(reply);
+  assert.equal(parsed.kind, 'oura');
+  assert.equal(parsed.toolUseId, 'toolu_oura');
+  assert.equal(parsed.oura.total_burn, 2100);
+});
+
+test('an Oura screenshot message tells Claude what it is and today’s date', () => {
+  const content = userTurnContent('', { image: { mediaType: 'image/jpeg', data: 'AAAA' }, ouraFor: 'Friday, November 13, 2026' });
+  assert.equal(content[0].type, 'image');
+  assert.equal(content[1].text, 'This is a screenshot from my Oura app. Today is Friday, November 13, 2026.');
+  assert.ok(userTurnContent('the steps are 9,000', { ouraFor: 'Friday, November 13, 2026' })[0].text.endsWith('the steps are 9,000'));
+});

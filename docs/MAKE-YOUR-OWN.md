@@ -103,6 +103,7 @@ Most personal things are already settings:
 | Supplements (add, rename, reorder, remove) | **Press and hold** any supplement on Today |
 | Workout types (name, emoji, what it tracks) | **Press and hold** any workout chip on Today |
 | Restaurant and brand lookups on or off | **Settings → AI meal estimates** |
+| Oura ring screenshots (measured calorie burn) | **Settings → Oura ring** (off unless you have one) |
 | Light or dark | Follows your iPhone's setting |
 
 ### Level 2: Edit files on the GitHub website

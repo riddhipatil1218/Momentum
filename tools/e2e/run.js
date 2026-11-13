@@ -14,6 +14,7 @@ import { backupSuite } from './suites/backup.js';
 import { calendarSuite } from './suites/calendar.js';
 import { dashboardSuite } from './suites/dashboard.js';
 import { macrosSuite } from './suites/macros.js';
+import { ouraSuite } from './suites/oura.js';
 import { prototypeSuite } from './suites/prototype.js';
 import { todaySuite } from './suites/today.js';
 import { upgradeSuite } from './suites/upgrade.js';
@@ -26,6 +27,7 @@ const SUITES = {
   today: ['Welcome screen and Today', todaySuite],
   calendar: ['Calendar', calendarSuite],
   macros: ['Macros (fake Anthropic server)', macrosSuite],
+  oura: ['Oura ring screenshots (fake Anthropic server)', ouraSuite],
   dashboard: ['Dashboard: calorie balance and weight', dashboardSuite],
   backup: ['Backup and restore', backupSuite],
   prototype: ['claude.ai prototype build', prototypeSuite],

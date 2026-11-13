@@ -30,6 +30,7 @@ export async function exportSpreadsheets() {
     ['momentum-meals', sortByDay(storeData.meals), CSV_TABLES.meals],
     ['momentum-supplements', sortByDay(storeData.supplementLogs), CSV_TABLES.supplements],
     ['momentum-weights', sortByDay(storeData.weights ?? []), CSV_TABLES.weights],
+    ...((storeData.ouraDays ?? []).length ? [['momentum-oura', sortByDay(storeData.ouraDays), CSV_TABLES.oura]] : []),
   ].map(([prefix, rows, columns]) =>
     new File([toCSV(rows, columns)], backupFileName(new Date(), 'csv', prefix), { type: 'text/csv' }));
   const result = await saveFiles(files);

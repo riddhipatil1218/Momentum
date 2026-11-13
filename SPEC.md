@@ -4,7 +4,7 @@ A personal app (one user, one iPhone) for logging workouts, supplements, meals/m
 and weight. It's a **web app**: you add it to the iPhone Home Screen and it runs full
 screen like a regular app. All data is stored on the phone.
 
-Status: **Milestones 1–4, Backup, calorie balance and smarter estimates live on the phone. Past-day balance breakdown and Weight (Milestone 5) in the prototype, awaiting review.** Sections marked
+Status: **All planned milestones live. Oura screenshots and multi-muscle-group strength workouts in the prototype, awaiting review.** Sections marked
 *(planned)* are proposals for later milestones and will be confirmed before they're built.
 
 ---
@@ -98,6 +98,11 @@ Newest at the bottom. Superseded decisions are kept (struck through) so the hist
 | D81 | The newest weigh-in updates the weight in your stats; daily targets don't change by themselves. Calorie burn for each day uses the latest weigh-in on or before that day. | More accurate burn without surprising target changes. |
 | D82 | **Click-through tests saved in the repo** (`tools/e2e/`, run with `npm run e2e`): 7 suites, 100 checks, covering database upgrades, Today, Calendar, Macros (fake Anthropic server), Dashboard (calorie math, "why", weight), backup/restore on a fresh "phone", and the prototype build. Playwright is installed separately with `npm install --no-save playwright` so the app stays library-free; GitHub's publish step still runs only the fast `npm test`. | Keeps the checks for future sessions and for the owner to rerun. |
 | D83 | `docs/MAKE-YOUR-OWN.md`: a step-by-step guide for a friend to fork the repo, turn on GitHub Pages and Actions, install it, add her own API key, and customize (in-app settings, editing files on GitHub: colors, quotes and their test rules, name, icon, defaults; Claude Code for bigger changes), plus syncing, troubleshooting and privacy. CLAUDE.md tells a fork to make its own prototype page. | Owner wants friends to be able to make their own version. |
+| D84 | **Several muscle groups per strength workout**: body focus is now a list (e.g. Upper body + Core), picked with multi-select chips ("pick all that apply"). Older workouts that stored one group as text still work everywhere (`bodyFocusList`). No database change needed. | Owner's request. |
+| D85 | **Oura ring support is optional and per phone**: Settings → "I use an Oura ring", off by default, can be turned on any time (for friends who get a ring later). Off: everything uses Momentum's estimate. Turning it off again keeps the Oura numbers but goes back to estimates. | Several people use the app; only some have Oura. |
+| D86 | **Oura screenshots in the Macros chat**: with Oura on, an attached photo gets a Meal / Oura screenshot switch. Oura photos are sent with "This is a screenshot from my Oura app. Today is …" and Claude answers through a second strict tool, `record_oura_activity` (date, total_burn, active_calories, steps, workouts[name, minutes, calories], is_oura, notes), offered only when Oura is on. Claude copies numbers, it doesn't estimate them. | Reliable reading with the same safe answer format as meals. |
+| D87 | **Database version 4** (owner approved): adds `ouraDays` (id = day key as text, so a newer screenshot for the same day replaces the older one; totalBurn, activeCalories, steps, workouts). In backups and an Oura CSV. Upgrade tested from versions 1, 2 and 3. | Oura numbers need their own table. |
+| D88 | For a day with Oura data (and Oura on), **Oura's measured Total Burn replaces the estimate** in the balance, streak, chart, "why" and breakdown (workouts shown as "included", nothing counted twice); other days keep the estimate. Oura's workouts are offered with checkboxes to add to the log (owner: ask each time); ones whose type is already logged that day start unticked; names are matched to your workout types (e.g. "Strength training" → Strength Training), unmatched ones are added as their own workout. | Owner's choices: measured burn for Oura users; no duplicate workouts. |
 
 ## 2. File structure
 
@@ -130,6 +135,7 @@ Momentum/
 │       │   ├── goals.js         under / on target / over, 7-day grid
 │       │   ├── backup.js        backup file build/check, CSV
 │       │   ├── energy.js        calorie burn (stats + workouts), balance, deficit streak
+│       │   ├── oura.js          Oura screenshot data, workout matching
 │       │   ├── weight.js        weigh-in trend, goal projection, next weigh-in
 │       │   ├── quotes.js        quote of the day
 │       │   ├── progress.js      weekly goal, streaks, logging cheer
@@ -149,6 +155,7 @@ Momentum/
 │   ├── energy.test.js
 │   ├── goals-backup.test.js
 │   ├── meals.test.js
+│   ├── oura.test.js
 │   ├── monthgrid.test.js
 │   ├── ordering.test.js
 │   ├── progress.test.js
@@ -231,6 +238,9 @@ Unchecking deletes the row.
 
 ### Database version 3 (Weight, built — D79)
 - **weights**: id, date, dayKey, pounds, createdAt. Indexed by dayKey.
+
+### Database version 4 (Oura, built — D87)
+- **ouraDays**: id (= dayKey as text), dayKey, totalBurn, activeCalories, steps, workouts[{name, minutes, calories}], savedAt. Indexed by dayKey.
 
 ## 4. Milestones
 

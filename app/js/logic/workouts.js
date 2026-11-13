@@ -21,6 +21,23 @@ export const DETAIL_KIND_LABELS = {
   [DetailKind.general]: 'Duration & notes',
 };
 
+/**
+ * The muscle groups of a strength workout as a list. Older workouts stored one group as
+ * text ("Glutes"); newer ones store a list (["Core", "Upper body"]). Both work (SPEC D84).
+ */
+export function bodyFocusList(workout) {
+  const value = workout?.bodyFocus;
+  if (Array.isArray(value)) return value.filter(Boolean);
+  return value ? [value] : [];
+}
+
+/** Adds or removes one muscle group, keeping the options' usual order. */
+export function toggleBodyFocus(workout, group) {
+  const current = bodyFocusList(workout);
+  const next = current.includes(group) ? current.filter((g) => g !== group) : [...current, group];
+  return BODY_FOCUS_OPTIONS.filter((o) => next.includes(o)).concat(next.filter((g) => !BODY_FOCUS_OPTIONS.includes(g)));
+}
+
 export const BODY_FOCUS_OPTIONS = ['Full body', 'Upper body', 'Lower body', 'Glutes', 'Arms', 'Back', 'Core'];
 export const DURATION_PRESETS = [20, 30, 45, 60, 75];
 
@@ -56,7 +73,7 @@ export function workoutSummary(workout) {
       if (workout.floors != null) parts.push(`${workout.floors} floors`);
       break;
     case DetailKind.strength:
-      if (workout.bodyFocus) parts.push(workout.bodyFocus);
+      if (bodyFocusList(workout).length) parts.push(bodyFocusList(workout).join(' + '));
       break;
     case DetailKind.hotYoga:
       if (workout.temperatureF != null) parts.push(`${workout.temperatureF}°F`);

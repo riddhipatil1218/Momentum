@@ -2,11 +2,14 @@
 // The Macros tab, top to bottom: today's totals, today's meals (grouped by breakfast,
 // lunch, dinner, snacks), "Log again" chips for saved meals, then the chat: describe a meal
 // (or attach a photo of it or its nutrition label), get an editable estimate from Claude,
-// reply to adjust it, and log it with one tap.
+// reply to adjust it, and log it with one tap. With Oura turned on in Settings, a photo can be
+// marked as an Oura screenshot: Claude reads the day's burn, steps and workouts, and saving the
+// card updates that day's calorie balance (and adds the workouts you tick).
 
-import { allSavedMeals, deleteMeal, deleteSavedMeal, getApiKey, getTargets, getWebLookup, logMeal, mealsOnDay,
-         saveSavedMeal } from '../data.js';
-import { todayKey } from '../logic/daykey.js';
+import { activeActivities, allSavedMeals, deleteMeal, deleteSavedMeal, getApiKey, getOuraEnabled, getTargets, getWebLookup,
+         logMeal, logWorkout, mealsOnDay, saveOuraDay, saveSavedMeal, saveWorkout, workoutsOnDay } from '../data.js';
+import { dateOnDayAtTime, startOfDay, todayKey } from '../logic/daykey.js';
+import { normalizeOuraActivity, preselectOuraWorkouts } from '../logic/oura.js';
 import { EstimateError, editedNote, userTurnContent } from '../logic/mealEstimate.js';
 import { dayTotals, macroLine, sortSavedMeals } from '../logic/meals.js';
 import { parseNumber } from '../logic/numbers.js';
@@ -32,6 +35,7 @@ const chat = {
   apiMessages: [],  // the current meal's conversation with Claude (only ever appended to)
   draft: '',        // text in the message box
   photo: null,      // a photo waiting to be sent: { mediaType, data, previewUrl }
+  photoKind: 'meal', // 'meal' or 'oura' (only offered when Oura is turned on)
   pendingToolUseId: null, // Claude's last estimate call, answered at the start of the next message
   pending: false,   // waiting for Claude
   scrollToEnd: false,
@@ -42,8 +46,8 @@ let rerender = () => {};
 export async function renderMacros(root, { isCurrent, refresh }) {
   rerender = refresh;
   const today = todayKey();
-  const [meals, targets, saved, apiKey] = await Promise.all([
-    mealsOnDay(today), getTargets(), allSavedMeals(), getApiKey(),
+  const [meals, targets, saved, apiKey, ouraEnabled] = await Promise.all([
+    mealsOnDay(today), getTargets(), allSavedMeals(), getApiKey(), getOuraEnabled(),
   ]);
   if (!isCurrent()) return;
 
@@ -78,16 +82,23 @@ export async function renderMacros(root, { isCurrent, refresh }) {
 
     <section class="chat" aria-label="Meal estimates" aria-live="polite">
       <h3 class="section-title">Estimate a meal</h3>
-      ${chat.items.length ? chat.items.map(itemHTML).join('') : introHTML()}
+      ${chat.items.length ? chat.items.map(itemHTML).join('') : introHTML(ouraEnabled)}
       ${chat.pending ? '<div class="bubble assistant typing"><span></span><span></span><span></span></div>' : ''}
     </section>
 
     ${canEstimate ? `
       <form class="composer" data-composer>
         ${chat.photo ? `
-          <div class="photo-preview">
-            <img src="${chat.photo.previewUrl}" alt="Photo to send">
-            <button type="button" data-action="remove-photo" aria-label="Remove photo">${icons.close}</button>
+          <div class="photo-row">
+            <div class="photo-preview">
+              <img src="${chat.photo.previewUrl}" alt="Photo to send">
+              <button type="button" data-action="remove-photo" aria-label="Remove photo">${icons.close}</button>
+            </div>
+            ${ouraEnabled ? `
+              <span class="segmented small" role="radiogroup" aria-label="What is this photo?">
+                <label><input type="radio" name="photoKind" value="meal" ${chat.photoKind !== 'oura' ? 'checked' : ''}><span>Meal</span></label>
+                <label><input type="radio" name="photoKind" value="oura" ${chat.photoKind === 'oura' ? 'checked' : ''}><span>Oura screenshot</span></label>
+              </span>` : ''}
           </div>` : ''}
         <div class="composer-row">
           <label class="photo-button" aria-label="Add a photo of the meal or its nutrition label">
@@ -142,12 +153,14 @@ function todayStripHTML(totals, targets) {
     </section>`;
 }
 
-function introHTML() {
+function introHTML(ouraEnabled) {
   return `
     <div class="bubble assistant intro">
       <p>Tell me what you ate, as you’d say it to a friend, or tap the camera to send a photo of your
         plate or a nutrition label. Name the restaurant or brand and I’ll look up its official numbers.
         You can correct anything before logging.</p>
+      ${ouraEnabled ? `<p>Using your Oura ring? Send a screenshot of your Oura activity (calories burned,
+        steps, workouts) and choose <b>Oura screenshot</b>. I’ll read the numbers for your calorie balance.</p>` : ''}
       <div class="examples">
         ${EXAMPLES.map((text) => `<button class="chip" data-example="${escapeHTML(text)}">${escapeHTML(text)}</button>`).join('')}
       </div>
@@ -164,6 +177,8 @@ function itemHTML(item, index) {
       return '<div class="chat-divider"><span>Next meal</span></div>';
     case 'estimate':
       return estimateCardHTML(item, index);
+    case 'oura':
+      return ouraCardHTML(item, index);
     default:
       return '';
   }
@@ -223,6 +238,9 @@ async function onTap(event, root) {
     return;
   }
 
+  const ouraSave = target.closest('[data-save-oura]');
+  if (ouraSave) return saveOura(Number(ouraSave.dataset.saveOura));
+
   const logButton = target.closest('[data-log-estimate]');
   if (logButton) return logEstimate(Number(logButton.dataset.logEstimate));
 
@@ -255,6 +273,20 @@ function onInput(event) {
     autoGrow(field);
     return;
   }
+  // Editing an Oura card (kept in memory until saved).
+  const ouraCard = field.closest('[data-oura]');
+  if (ouraCard) {
+    const item = chat.items[Number(ouraCard.dataset.oura)];
+    if (field.name === 'ouraDate') {
+      const [y, m, d] = field.value.split('-').map(Number);
+      if (y && m && d) item.activity.dayKey = y * 10000 + m * 100 + d;
+    } else if (field.name === 'pickWorkout') {
+      item.workouts[Number(field.value)].picked = field.checked;
+    } else if (['totalBurn', 'activeCalories', 'steps'].includes(field.name)) {
+      item.activity[field.name] = Math.max(0, Math.round(parseNumber(field.value) ?? 0));
+    }
+    return;
+  }
   // Editing a number or the name on an estimate card (kept in memory until logged).
   const card = field.closest('[data-estimate]');
   if (!card) return;
@@ -268,6 +300,8 @@ function onInput(event) {
 }
 
 async function onChange(event) {
+  if (event.target.name === 'photoKind') { chat.photoKind = event.target.value; return; }
+  if (event.target.closest('[data-oura]')) { onInput(event); return; }
   // A photo was chosen: shrink it and show it above the message box until sent.
   if (!event.target.matches('[data-photo]')) return;
   const file = event.target.files?.[0];
@@ -290,22 +324,30 @@ async function send() {
   const replyingToEdited = last && last.edited && !last.loggedMealId && chat.apiMessages.length > 0;
   const messageText = replyingToEdited ? `${editedNote(last.estimate)}\n\n${text}` : text;
   const pendingToolUseId = chat.pendingToolUseId;
+  const ouraEnabled = await getOuraEnabled();
+  const isOuraPhoto = Boolean(photo) && ouraEnabled && chat.photoKind === 'oura';
+  const ouraFor = isOuraPhoto
+    ? new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) : null;
 
-  chat.items.push({ type: 'user', text, photoUrl: photo?.previewUrl ?? null });
-  chat.apiMessages.push({ role: 'user', content: userTurnContent(messageText, { pendingToolUseId, image: photo }) });
+  chat.items.push({ type: 'user', text, photoUrl: photo?.previewUrl ?? null, oura: isOuraPhoto });
+  chat.apiMessages.push({ role: 'user', content: userTurnContent(messageText, { pendingToolUseId, image: photo, ouraFor }) });
   chat.draft = '';
   chat.photo = null;
+  chat.photoKind = 'meal';
   chat.pending = true;
   chat.scrollToEnd = true;
   rerender();
 
   try {
     const [apiKey, webLookup] = await Promise.all([getApiKey(), getWebLookup()]);
-    const { estimate, assistantContent, toolUseId, sources } = await estimateMeal(apiKey, chat.apiMessages, { webLookup });
+    const { kind, estimate, oura, assistantContent, toolUseId, sources } =
+      await estimateMeal(apiKey, chat.apiMessages, { webLookup, ouraEnabled });
     // The full reply (thinking, searches, the tool call) goes back unchanged next time.
     chat.apiMessages.push({ role: 'assistant', content: assistantContent });
     chat.pendingToolUseId = toolUseId;
-    if (estimate.isFood) {
+    if (kind === 'oura') {
+      chat.items.push(await ouraItem(oura));
+    } else if (estimate.isFood) {
       chat.items.push({ type: 'estimate', estimate, sources: sources ?? [], sourceText: text, edited: false,
                         demo: typeof globalThis.momentumDemoEstimator === 'function' });
     } else {
@@ -324,6 +366,89 @@ async function send() {
     chat.scrollToEnd = true;
     rerender();
   }
+}
+
+// ---- Oura screenshots ---------------------------------------------------------------------
+
+/** Turns what Claude read into a card: numbers plus Oura's workouts, ticked unless already logged. */
+async function ouraItem(raw) {
+  const activity = normalizeOuraActivity(raw, todayKey());
+  if (!activity.isOura) {
+    return { type: 'note', text: activity.notes || 'That doesn’t look like an Oura screenshot. Try your Oura activity screen.' };
+  }
+  const [activities, logged] = await Promise.all([activeActivities(), workoutsOnDay(activity.dayKey)]);
+  const workouts = preselectOuraWorkouts(activity.workouts, logged, activities)
+    .map((w) => ({ ...w, picked: !w.alreadyLogged }));
+  return { type: 'oura', activity, workouts, savedAt: null, demo: typeof globalThis.momentumDemoEstimator === 'function' };
+}
+
+function ouraCardHTML(item, index) {
+  const a = item.activity;
+  const saved = Boolean(item.savedAt);
+  const iso = String(a.dayKey).replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3');
+  const dayLabel = a.dayKey === todayKey() ? 'today' : startOfDay(a.dayKey).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  const number = (field, label, unit) => `
+    <label class="estimate-field">
+      <span>${label}</span>
+      <span class="estimate-input"><input name="${field}" inputmode="numeric" value="${a[field]}" ${saved ? 'disabled' : ''}
+        aria-label="${label}" autocomplete="off"><em>${unit}</em></span>
+    </label>`;
+  return `
+    <article class="estimate-card oura-card ${saved ? 'logged' : ''}" data-oura="${index}">
+      <div class="estimate-top">
+        <span class="oura-title">Oura activity</span>
+        <input class="date-input small" type="date" name="ouraDate" value="${iso}" ${saved ? 'disabled' : ''} aria-label="Day">
+      </div>
+      ${a.dateWasRead ? '' : '<p class="estimate-hint">No date was visible, so this is set to today. Change it if needed.</p>'}
+      <div class="estimate-grid three">
+        ${number('totalBurn', 'Total burn', 'kcal')}
+        ${number('activeCalories', 'Active', 'kcal')}
+        ${number('steps', 'Steps', '')}
+      </div>
+      ${item.workouts.length ? `
+        <div class="oura-workouts">
+          <span class="oura-workouts-title">Add to your workout log</span>
+          ${item.workouts.map((w, i) => `
+            <label class="oura-workout">
+              <input type="checkbox" name="pickWorkout" value="${i}" ${w.picked ? 'checked' : ''} ${saved ? 'disabled' : ''}>
+              <span class="row-text">
+                <span class="row-title">${escapeHTML(w.type ? w.type.name : w.name)}</span>
+                <span class="row-subtitle">${w.minutes ? `${w.minutes} min` : 'no duration shown'}${w.calories ? ` · ${w.calories} kcal` : ''}${w.alreadyLogged ? ' · already in your log' : ''}</span>
+              </span>
+            </label>`).join('')}
+        </div>` : ''}
+      ${item.demo ? '<p class="demo-note">Demo numbers (prototype only)</p>' : ''}
+      ${saved
+        ? `<p class="logged-note">${icons.check} Saved to ${escapeHTML(dayLabel)} · Dashboard updated</p>`
+        : `<button class="primary-button" data-save-oura="${index}">Save to ${escapeHTML(dayLabel)}</button>
+           <p class="estimate-hint">Oura’s total burn replaces Momentum’s estimate for this day.</p>`}
+    </article>`;
+}
+
+async function saveOura(index) {
+  const item = chat.items[index];
+  if (!item || item.savedAt) return;
+  if (!(item.activity.totalBurn > 0)) {
+    showToast('Add the total burn first (the card’s first number).');
+    return;
+  }
+  haptic();
+  await saveOuraDay(item.activity);
+  // Add the ticked workouts to the log on that day.
+  const day = item.activity.dayKey;
+  const when = day === todayKey() ? new Date() : dateOnDayAtTime(day, new Date(2000, 0, 1, 12, 0));
+  for (const w of item.workouts.filter((x) => x.picked)) {
+    const type = w.type ?? { name: w.name.replace(/^./, (c) => c.toUpperCase()), emoji: '🏅', detailKind: 'general' };
+    const workout = await logWorkout(type, when);
+    await saveWorkout({ ...workout, durationMinutes: w.minutes || null, source: 'oura' });
+  }
+  item.savedAt = new Date().toISOString();
+  // The next message starts fresh.
+  chat.apiMessages = [];
+  chat.pendingToolUseId = null;
+  chat.items.push({ type: 'divider' });
+  showToast(`Oura numbers saved${item.workouts.some((w) => w.picked) ? ' and workouts added' : ''}`);
+  rerender();
 }
 
 async function logEstimate(index) {

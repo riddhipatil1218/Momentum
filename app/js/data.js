@@ -280,3 +280,29 @@ export async function logWeight(pounds, date = new Date()) {
   if (newest && profile) await saveProfile({ ...profile, weightLb: pounds });
   return entry;
 }
+
+// ---- Oura ring (optional, per phone) ---------------------------------------------------
+
+/** Whether this phone's owner uses an Oura ring (Settings). Off by default. */
+export async function getOuraEnabled() {
+  return (await db.getMeta('ouraEnabled')) ?? false;
+}
+export const saveOuraEnabled = (on) => db.setMeta('ouraEnabled', on);
+
+export const ouraDaysBetween = (firstDayKey, lastDayKey) => db.getByDayRange('ouraDays', firstDayKey, lastDayKey);
+
+/** Saves a day's Oura numbers. A newer screenshot for the same day replaces the older one. */
+export async function saveOuraDay(activity) {
+  const record = {
+    id: String(activity.dayKey),
+    dayKey: activity.dayKey,
+    totalBurn: activity.totalBurn,
+    activeCalories: activity.activeCalories,
+    steps: activity.steps,
+    workouts: activity.workouts,
+    savedAt: new Date().toISOString(),
+  };
+  await db.put('ouraDays', record);
+  return record;
+}
+export const deleteOuraDay = (dayKey) => db.delete('ouraDays', String(dayKey));

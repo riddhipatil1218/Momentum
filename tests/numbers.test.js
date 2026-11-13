@@ -45,7 +45,8 @@ test('workout summaries by activity type', () => {
                '30 min · 3 mi · 10:00 /mi');
   assert.equal(workoutSummary({ ...base, detailKind: DetailKind.stairMaster, durationMinutes: 20, stairLevel: 8, floors: 60 }),
                '20 min · Level 8 · 60 floors');
-  assert.equal(workoutSummary({ ...base, detailKind: DetailKind.strength, bodyFocus: 'Glutes' }), 'Glutes');
+  assert.equal(workoutSummary({ ...base, detailKind: DetailKind.strength, bodyFocus: 'Glutes' }), 'Glutes'); // older single value
+  assert.equal(workoutSummary({ ...base, detailKind: DetailKind.strength, bodyFocus: ['Upper body', 'Core'] }), 'Upper body + Core');
   assert.equal(workoutSummary({ ...base, detailKind: DetailKind.hotYoga, durationMinutes: 60, temperatureF: 105 }),
                '60 min · 105°F');
   assert.equal(workoutSummary({ ...base, detailKind: DetailKind.general, notes: 'Felt strong' }), 'Felt strong');
@@ -67,4 +68,15 @@ test('emoji are wrapped for black-and-white display', async () => {
   assert.equal(monoEmoji('Keep going 🔥'), 'Keep going <span class="mono">🔥</span>');
   assert.equal(monoEmoji('No emoji here'), 'No emoji here');
   assert.equal(monoEmoji('🏃‍♀️ run'), '<span class="mono">🏃‍♀️</span> run');
+});
+
+test('several muscle groups per strength workout; old single values still work', async () => {
+  const { bodyFocusList, toggleBodyFocus } = await import('../app/js/logic/workouts.js');
+  assert.deepEqual(bodyFocusList({ bodyFocus: 'Glutes' }), ['Glutes']);
+  assert.deepEqual(bodyFocusList({ bodyFocus: null }), []);
+  assert.deepEqual(bodyFocusList({ bodyFocus: ['Core', 'Arms'] }), ['Core', 'Arms']);
+  // Adding keeps the usual order (Upper body before Core); tapping again removes.
+  assert.deepEqual(toggleBodyFocus({ bodyFocus: ['Core'] }, 'Upper body'), ['Upper body', 'Core']);
+  assert.deepEqual(toggleBodyFocus({ bodyFocus: ['Upper body', 'Core'] }, 'Core'), ['Upper body']);
+  assert.deepEqual(toggleBodyFocus({ bodyFocus: 'Glutes' }, 'Back'), ['Glutes', 'Back']);
 });

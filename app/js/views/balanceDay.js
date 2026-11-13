@@ -53,12 +53,21 @@ export function openBalanceDay(startDayKey) {
 
           <section class="card ledger">
             <div class="card-header"><h3>Burned</h3><span class="badge muted">${fmt(day.burned)} kcal</span></div>
-            <div class="ledger-row"><span>Everyday (your stats at ${fmt(day.weightLb)} lb)</span><strong>${fmt(day.everyday)}</strong></div>
-            ${day.workouts.map((w) => `
-              <div class="ledger-row">
-                <span><span class="ledger-emoji">${escapeHTML(w.emoji ?? '')}</span>${escapeHTML(w.name)} · ${w.minutes} min${w.assumedDuration ? ' (assumed)' : ''}</span>
-                <strong>${fmt(w.kcal)}</strong>
-              </div>`).join('') || '<div class="ledger-row muted"><span>No workouts</span><strong>0</strong></div>'}
+            ${day.source === 'oura' ? `
+              <div class="ledger-row"><span>Total burn, measured by Oura</span><strong>${fmt(day.oura.totalBurn)}</strong></div>
+              ${day.oura.activeCalories ? `<div class="ledger-row muted"><span>of which active calories</span><strong>${fmt(day.oura.activeCalories)}</strong></div>` : ''}
+              ${day.oura.steps ? `<div class="ledger-row muted"><span>Steps</span><strong>${fmt(day.oura.steps)}</strong></div>` : ''}
+              ${day.workouts.map((w) => `
+                <div class="ledger-row muted">
+                  <span><span class="ledger-emoji">${escapeHTML(w.emoji ?? '')}</span>${escapeHTML(w.name)} · ${w.minutes} min</span>
+                  <strong>included</strong>
+                </div>`).join('')}` : `
+              <div class="ledger-row"><span>Everyday (your stats at ${fmt(day.weightLb)} lb)</span><strong>${fmt(day.everyday)}</strong></div>
+              ${day.workouts.map((w) => `
+                <div class="ledger-row">
+                  <span><span class="ledger-emoji">${escapeHTML(w.emoji ?? '')}</span>${escapeHTML(w.name)} · ${w.minutes} min${w.assumedDuration ? ' (assumed)' : ''}</span>
+                  <strong>${fmt(w.kcal)}</strong>
+                </div>`).join('') || '<div class="ledger-row muted"><span>No workouts</span><strong>0</strong></div>'}`}
           </section>
 
           <section class="card ledger">
@@ -70,8 +79,9 @@ export function openBalanceDay(startDayKey) {
               </div>`).join('')}
           </section>
 
-          <p class="footnote">Everyday burn = resting calories × 1.2 for daily life, from your stats. Workout calories
-            depend on the activity, duration and pace. These are estimates.</p>`;
+          <p class="footnote">${day.source === 'oura'
+            ? 'This day uses the total burn from your Oura screenshot, which already includes your workouts.'
+            : 'Everyday burn = resting calories × 1.2 for daily life, from your stats. Workout calories depend on the activity, duration and pace. These are estimates.'}</p>`;
       }
 
       body.onclick = (event) => {

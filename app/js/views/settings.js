@@ -3,8 +3,8 @@
 // workout lists, and the AI key for meal estimates. Editing opens a sheet; the tab itself
 // only shows the current values, so it can redraw freely.
 
-import { getApiKey, getLastBackupAt, getProfile, getTargets, getWebLookup, getWeeklyGoal, removeApiKey, saveWebLookup, saveApiKey, saveProfile,
-         saveTargets, saveWeeklyGoal } from '../data.js';
+import { getApiKey, getLastBackupAt, getOuraEnabled, getProfile, getTargets, getWebLookup, getWeeklyGoal, removeApiKey, saveWebLookup,
+         saveApiKey, saveOuraEnabled, saveProfile, saveTargets, saveWeeklyGoal } from '../data.js';
 import { ACTIVITY_LEVELS, formatHeight, profileProblems, suggestTargets } from '../logic/targets.js';
 import { escapeHTML } from '../logic/text.js';
 import { icons } from '../ui/icons.js';
@@ -16,8 +16,8 @@ import { fillTargets, readStatsForm, readTargets, statsFormHTML, targetsFieldsHT
          updateMacroSum } from './statsForm.js';
 
 export async function renderSettings(root, { isCurrent }) {
-  const [profile, targets, weeklyGoal, apiKey, lastBackupAt, webLookup] = await Promise.all([
-    getProfile(), getTargets(), getWeeklyGoal(), getApiKey(), getLastBackupAt(), getWebLookup(),
+  const [profile, targets, weeklyGoal, apiKey, lastBackupAt, webLookup, ouraEnabled] = await Promise.all([
+    getProfile(), getTargets(), getWeeklyGoal(), getApiKey(), getLastBackupAt(), getWebLookup(), getOuraEnabled(),
   ]);
   const lastBackup = lastBackupAt
     ? new Date(lastBackupAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
@@ -92,6 +92,20 @@ export async function renderSettings(root, { isCurrent }) {
     <p class="footnote">Estimates cost about 2–3¢ each, plus about 1¢ per online lookup (usually 1–3),
       billed by Anthropic. Generic foods are estimated without searching.</p>
 
+    <h3 class="section-title">Oura ring</h3>
+    <div class="form-group">
+      <label class="form-row toggle-row">
+        <span class="row-text">
+          <span class="row-title">I use an Oura ring</span>
+          <span class="row-subtitle">Send Oura screenshots in the Macros chat</span>
+        </span>
+        <input type="checkbox" class="switch" data-oura-enabled ${ouraEnabled ? 'checked' : ''}>
+      </label>
+    </div>
+    <p class="footnote">${ouraEnabled
+      ? 'On days you send an Oura screenshot, its measured total burn replaces Momentum’s estimate in your calorie balance. Other days use the estimate. Turning this off goes back to estimates (your Oura numbers are kept).'
+      : 'Off: your calorie burn is estimated from your stats and logged workouts. Got an Oura ring? Turn this on any time.'}</p>
+
     <h3 class="section-title">Backup</h3>
     <div class="form-group">
       <button class="form-row settings-row" data-open="backup">
@@ -129,6 +143,7 @@ export async function renderSettings(root, { isCurrent }) {
   };
   root.onchange = (event) => {
     if (event.target.matches('[data-web-lookup]')) saveWebLookup(event.target.checked);
+    if (event.target.matches('[data-oura-enabled]')) saveOuraEnabled(event.target.checked);
   };
 }
 

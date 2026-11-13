@@ -9,10 +9,10 @@ export const BACKUP_APP = 'momentum';
 export const BACKUP_FORMAT = 1;
 
 /** Tables included in a backup, in the order they're restored. */
-export const BACKUP_STORES = ['activityTypes', 'supplements', 'workouts', 'supplementLogs', 'meals', 'savedMeals', 'weights'];
+export const BACKUP_STORES = ['activityTypes', 'supplements', 'workouts', 'supplementLogs', 'meals', 'savedMeals', 'weights', 'ouraDays'];
 
 /** Settings (meta keys) included in a backup. The API key is deliberately not in this list. */
-export const BACKUP_META_KEYS = ['profile', 'targets', 'weeklyGoal', 'setup.done', 'seeded.v1', 'webLookup'];
+export const BACKUP_META_KEYS = ['profile', 'targets', 'weeklyGoal', 'setup.done', 'seeded.v1', 'webLookup', 'ouraEnabled'];
 
 export function buildBackup(storeData, meta, exportedAt = new Date()) {
   const data = {};
@@ -90,7 +90,7 @@ export const CSV_TABLES = {
   workouts: [
     ['Date', (w) => localDate(w.dayKey)], ['Time', (w) => localTime(w.date)], ['Activity', (w) => w.activityName],
     ['Duration (min)', (w) => w.durationMinutes], ['Distance (mi)', (w) => w.distanceMiles],
-    ['Level', (w) => w.stairLevel], ['Floors', (w) => w.floors], ['Body focus', (w) => w.bodyFocus],
+    ['Level', (w) => w.stairLevel], ['Floors', (w) => w.floors], ['Body focus', (w) => (Array.isArray(w.bodyFocus) ? w.bodyFocus : w.bodyFocus ? [w.bodyFocus] : [])],
     ['Temperature (°F)', (w) => w.temperatureF], ['Notes', (w) => w.notes],
   ],
   meals: [
@@ -101,6 +101,10 @@ export const CSV_TABLES = {
   ],
   weights: [
     ['Date', (w) => localDate(w.dayKey)], ['Weight (lb)', (w) => w.pounds],
+  ],
+  oura: [
+    ['Date', (o) => localDate(o.dayKey)], ['Total burn (kcal)', (o) => o.totalBurn], ['Active calories', (o) => o.activeCalories],
+    ['Steps', (o) => o.steps], ['Workouts', (o) => (o.workouts ?? []).map((w) => `${w.name} ${w.minutes} min`)],
   ],
   supplements: [
     ['Date', (l) => localDate(l.dayKey)], ['Supplement', (l) => l.supplementName], ['Logged at', (l) => dateOf(l.loggedAt)],

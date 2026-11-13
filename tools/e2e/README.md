@@ -37,7 +37,7 @@ Each check prints ✓ or ✗, then a summary like `100 passed, 0 failed.`
 Other options:
 
 - `npm run e2e -- macros dashboard` runs only those suites
-  (upgrade, today, calendar, macros, dashboard, backup, prototype)
+  (upgrade, today, calendar, macros, oura, dashboard, backup, prototype)
 - `npm run e2e -- --screenshots` also saves phone screenshots to `tools/e2e/screenshots/`
 
 ## Files

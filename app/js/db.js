@@ -42,6 +42,13 @@ const MIGRATIONS = [
     const weights = db.createObjectStore('weights', { keyPath: 'id' });
     weights.createIndex('dayKey', 'dayKey');
   },
+
+  // Version 4 — Oura: one record per day of numbers read from an Oura screenshot
+  // (id = the day key as text, so a newer screenshot for the same day replaces the older one).
+  (db) => {
+    const ouraDays = db.createObjectStore('ouraDays', { keyPath: 'id' });
+    ouraDays.createIndex('dayKey', 'dayKey');
+  },
 ];
 
 export const DB_VERSION = MIGRATIONS.length;
