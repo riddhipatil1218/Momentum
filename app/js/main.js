@@ -48,7 +48,7 @@ function showTab(tabId, { scrollToTop = true } = {}) {
     b.setAttribute('aria-current', active ? 'page' : 'false');
   });
   // Each tab sets its own tap/typing handlers; clear the previous tab's first.
-  view.onclick = view.oninput = view.onchange = view.onsubmit = view.onkeydown = null;
+  view.onclick = view.oninput = view.onchange = view.onsubmit = view.onkeydown = view.onpaste = null;
   document.body.dataset.tab = currentTab.id; // lets the CSS make room for the Macros message box
   if (scrollToTop) window.scrollTo(0, 0);
   refresh();

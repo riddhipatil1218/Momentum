@@ -737,6 +737,9 @@ body[data-tab="macros"] .view { padding-bottom: calc(var(--tabbar-height) + env(
   display: grid; place-items: center; color: var(--accent-strong);
   background: var(--card); border: 1px solid var(--border); box-shadow: var(--shadow);
 }
+/* The Paste button looks like the camera button, not like the filled Send button. */
+.composer button.photo-button { background: var(--card); color: var(--accent-strong); border: 1px solid var(--border); box-shadow: var(--shadow); }
+.composer button.photo-button:active { background: var(--fill); }
 .photo-preview { position: relative; align-self: flex-start; }
 .photo-preview img { display: block; height: 64px; max-width: 120px; object-fit: cover; border-radius: 12px; box-shadow: var(--shadow); }
 .photo-preview button {

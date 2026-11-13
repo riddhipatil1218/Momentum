@@ -105,6 +105,10 @@ export async function renderMacros(root, { isCurrent, refresh }) {
             ${icons.camera}
             <input type="file" accept="image/*" data-photo hidden>
           </label>
+          ${canPasteImages() ? `
+            <button type="button" class="photo-button" data-action="paste-photo" aria-label="Paste a copied picture or screenshot">
+              ${icons.paste}
+            </button>` : ''}
           <textarea name="message" rows="1" placeholder="${chat.photo ? 'Add a note (optional)…' : 'Describe a meal…'}"
                     aria-label="Describe a meal" enterkeyhint="send">${escapeHTML(chat.draft)}</textarea>
           <button type="submit" class="send-button" aria-label="Send" ${chat.pending ? 'disabled' : ''}>${icons.send}</button>
@@ -126,6 +130,7 @@ export async function renderMacros(root, { isCurrent, refresh }) {
   root.oninput = onInput;
   root.onchange = onChange;
   root.onsubmit = (event) => { event.preventDefault(); send(); };
+  root.onpaste = onPaste;
   root.onkeydown = (event) => {
     // On a computer keyboard, Enter sends and Shift+Enter adds a new line.
     if (event.target.name === 'message' && event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
@@ -159,8 +164,9 @@ function introHTML(ouraEnabled) {
       <p>Tell me what you ate, as you’d say it to a friend, or tap the camera to send a photo of your
         plate or a nutrition label. Name the restaurant or brand and I’ll look up its official numbers.
         You can correct anything before logging.</p>
-      ${ouraEnabled ? `<p>Using your Oura ring? Send a screenshot of your Oura activity (calories burned,
-        steps, workouts) and choose <b>Oura screenshot</b>. I’ll read the numbers for your calorie balance.</p>` : ''}
+      ${ouraEnabled ? `<p>Using your Oura ring? Copy a screenshot of your Oura activity (calories burned,
+        steps, workouts), tap <b>Paste</b> (or the camera to pick it from Photos), and choose
+        <b>Oura screenshot</b>. I’ll read the numbers for your calorie balance.</p>` : ''}
       <div class="examples">
         ${EXAMPLES.map((text) => `<button class="chip" data-example="${escapeHTML(text)}">${escapeHTML(text)}</button>`).join('')}
       </div>
@@ -259,6 +265,9 @@ async function onTap(event, root) {
     case 'add-key':
       openApiKeySheet(null);
       break;
+    case 'paste-photo':
+      pastePhotoFromClipboard();
+      break;
     case 'remove-photo':
       chat.photo = null;
       rerender();
@@ -305,13 +314,50 @@ async function onChange(event) {
   // A photo was chosen: shrink it and show it above the message box until sent.
   if (!event.target.matches('[data-photo]')) return;
   const file = event.target.files?.[0];
-  if (!file) return;
+  if (file) await attachPhoto(file);
+}
+
+// ---- Pasting a copied picture (e.g. an Oura screenshot) ----------------------------------
+
+/** Shrinks a picture and shows it above the message box until it's sent. */
+async function attachPhoto(fileOrBlob) {
   try {
-    chat.photo = await preparePhoto(file);
+    chat.photo = await preparePhoto(fileOrBlob);
   } catch (error) {
     showToast(error.message);
   }
   rerender();
+}
+
+/** The Paste button only appears where the phone/browser lets apps read copied pictures. */
+function canPasteImages() {
+  return typeof navigator.clipboard?.read === 'function';
+}
+
+/** The Paste button: reads a copied picture (iPhone asks you to tap "Paste" to allow it). */
+async function pastePhotoFromClipboard() {
+  try {
+    for (const item of await navigator.clipboard.read()) {
+      const type = item.types.find((t) => t.startsWith('image/'));
+      if (type) {
+        await attachPhoto(await item.getType(type));
+        return;
+      }
+    }
+    showToast('No picture copied. Take a screenshot, tap its preview, then Share → Copy.');
+  } catch (error) {
+    showToast(error?.name === 'NotAllowedError'
+      ? 'Paste wasn’t allowed. Tap Paste again, then tap “Paste” in the bubble that appears.'
+      : 'That couldn’t be pasted. Try the camera button to pick it from Photos.');
+  }
+}
+
+/** Pasting straight into the message box (where the phone allows it): pictures attach, text pastes normally. */
+function onPaste(event) {
+  const image = [...(event.clipboardData?.files ?? [])].find((f) => f.type.startsWith('image/'));
+  if (!image) return; // plain text: let it paste into the box as usual
+  event.preventDefault();
+  attachPhoto(image);
 }
 
 async function send() {

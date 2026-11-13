@@ -39,8 +39,33 @@ export async function ouraSuite(browser, { appUrl, iconPath, screenshots }) {
 
   const requests = await fakeAnthropic(page, () => ({ json: ouraReply(SCREENSHOT) }));
   await page.click('[data-tab="macros"]');
-  await page.setInputFiles('[data-photo]', iconPath);
+
+  // Pasting straight into the message box: a copied picture attaches, text pastes as normal.
+  await page.evaluate(async (url) => {
+    const blob = await (await fetch(url)).blob();
+    const data = new DataTransfer();
+    data.items.add(new File([blob], 'shot.png', { type: 'image/png' }));
+    document.querySelector('textarea[name="message"]').dispatchEvent(new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }));
+  }, 'icons/icon-180.png');
   await page.waitForSelector('.photo-preview img');
+  check('pasting a picture into the message box attaches it', await page.isVisible('.photo-preview img'));
+  await page.click('[data-action="remove-photo"]');
+
+  // The Paste button reads a copied screenshot from the clipboard.
+  await context.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: new URL(appUrl).origin });
+  await page.evaluate(() => navigator.clipboard.writeText('just words'));
+  await page.click('[data-action="paste-photo"]');
+  await page.waitForSelector('.toast');
+  check('Paste with no picture copied explains how to copy one', (await text(page, '.toast')).startsWith('No picture copied'));
+  await page.evaluate(async (url) => {
+    const blob = await (await fetch(url)).blob();
+    await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+  }, 'icons/icon-180.png');
+  await page.click('[data-action="paste-photo"]');
+  await page.waitForSelector('.photo-preview img');
+  check('the Paste button attaches a copied screenshot', await page.isVisible('.photo-preview img'));
+  check('a pasted picture starts as a Meal photo until you pick Oura',
+    await page.isChecked('input[name="photoKind"][value="meal"]'));
   await page.click('.segmented >> text=Oura screenshot');
   await page.click('.send-button');
   await page.waitForSelector('.oura-card');
